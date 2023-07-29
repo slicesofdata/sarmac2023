@@ -1,0 +1,1430 @@
+---
+title: "Juror Risk - Weighted-Average Illusion"
+#author: "gcook"
+date: Sys.Date()
+output: html_document
+---
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+####################################################################
+# Don't forget to run this
+####################################################################
+#rm(list = ls(all.names = TRUE))      # remove objects in R
+
+source("https://raw.githubusercontent.com/slicesofdata/zaatar/main/libraries.R") # library updates comment out before knitting
+source("https://raw.githubusercontent.com/slicesofdata/zaatar/main/function_test.R") # run to include in function definitions
+source("https://pastebin.com/raw/8mXH02yg")   
+source("https://pastebin.com/raw/97NNTTzu")   
+
+# set the paths for project, script, and data dirs
+proj_name = "wai_juror"
+proj_dir <- here::here()
+lapply(c("data", "r", "r/src", "figs", "docs", "api"), dir.create) 
+r_dir    <- paste(proj_dir, "r", sep = "/")    # r subdir
+data_dir <- paste(proj_dir, "data", sep = "/") 
+
+include_plots = F
+do_exclusion  = F
+knitr::opts_chunk$set(
+	echo = FALSE,
+	message = FALSE,
+	warning = FALSE
+)
+
+#source("https://www.dropbox.com/s/rh2vx2s38b6s3xx/setupR.txt?raw=1")                 # get personal functions
+```
+
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+library(magrittr)
+library(dplyr)
+library(readr)
+library(ggplot2)
+library(scales)
+```
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+file.copy("X:/Data/repos/R/gic_functions.txt", 
+          here::here("r", "src", "functions.txt"),
+          overwrite = T)
+source(here::here("r", "src",  "functions.txt"))
+#source(paste(r_dir, "code.txt", sep = "/"))
+
+#source("C:/Users/gcook/Sync/Progs/R/R-Portable/mypackages/zaatar Scripts/packages.R")
+#source("C:/Users/gcook/Sync/Progs/R/R-Portable/mypackages/zaatar Scripts/surveys.R")
+
+#source("C:/Users/gcook/Sync/Progs/R/R-Portable/mypackages/zaatar Scripts/kableExtras.txt")
+#source("C:/Users/gcook/Sync/Progs/R/R-Portable/mypackages/zaatar Scripts/ggPlots.txt")
+#source("C:/Users/gcook/Sync/Progs/R/R-Portable/mypackages/zaatar Scripts/means.txt")
+#source("C:/Users/gcook/Sync/Progs/R/R-Portable/mypackages/zaatar Scripts/kableExtras.txt")
+source("https://raw.githubusercontent.com/slicesofdata/zaatar/main/kableExtras.txt")
+source("https://raw.githubusercontent.com/slicesofdata/zaatar/main/ggPlots.txt")
+source("https://raw.githubusercontent.com/slicesofdata/zaatar/main/means.txt")
+
+#pkgs = c("magrittr", "dplyr")
+#suppressPackageStartupMessages(package.check(pkgs))
+`%ni%` = Negate(`%in%`)
+
+# send_to_file <- function(text, filename, append = T) {
+#  
+#  fileConn = file(filepath)
+#  writeLines(text, fileConn, append = append)
+#  close(fileConn)
+#}
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+true_count  <- function(x) {
+  if(is.vector(x)) {
+    return(sum(x == 0, na.rm = T))
+  }
+}
+
+kbl_it_table <- function(x, 
+                         caption = "", 
+                         freq = F, 
+                         percent = F,
+                         align = "r"#,
+   #                      data_only = F,
+    #                     table_only = F
+                         ) {
+  if(!require(kableExtra)) {install.packages("kableExtra", dep = T)}
+  if(!require(magrittr)) {install.packages("magrittr", dep = T)}
+
+  varname = gsub(".*\\$", "", deparse(substitute(x)))
+  
+  t = table(x)
+  if (!freq) {  t = prop.table(t)  }
+    
+  t = as.data.frame(t); names(t)[1] = varname
+  if (!freq) { 
+    names(t)[2] = "Prob"; t[["Prob"]] = round(t[["Prob"]], 2)
+  }
+  
+  if (percent) {
+    t[["Prob"]] = round(t[["Prob"]], 2) * 100; names(t)[2] = "%"
+  }
+  
+  ret.obj = list(data = t, 
+              table = t %>% 
+                kableExtra::kbl(caption = caption, align = align) %>%
+                kableExtra::kable_classic(full_width = F, html_font = "Calibri"))
+
+  #ret = ifelse(table_only == T, ret.obj[[2]],
+  #      ifelse(data_only  == T, ret.obj[[1]], ret.obj))
+
+  return(ret.obj)
+}
+
+# https://blogs.uoregon.edu/rclub/2016/04/05/plotting-your-logistic-regression-models/
+# https://www.statology.org/plot-logistic-regression-in-r/
+# https://www.danieldsjoberg.com/gtsummary/
+# Logistic Graph Function
+glm_modPlot = function(
+  formula = NULL,
+  data    = NULL, 
+  family = "binomial",
+  increment = .01, 
+  point.col = "red", 
+  xlab = "Predictor",
+  ylab = "P(outcome)",
+  title = "Predicted",
+  add_plot = T
+  ) {
+  
+  if (!is.null(formula) | !is.null(data) ) {
+  
+  # fit logistic regression model
+  model = glm(as.formula(formula), data = data, family = family)
+  
+  # define new data frame that contains predictor 
+  newdata = data.frame("newvar" = seq(
+    from  = min(data[[names(model$model)[2]]]),
+#    from  = min(data[[gsub(".*~| ",  "", formula)]]), 
+    to    = max(data[[names(model$model)[2]]]),
+    #to    = max(data[[gsub(".*~| ",  "", formula)]]), 
+    by    = increment))
+  names(newdata)[1] = names(model$model)[2]
+  #names(newdata)[1] = gsub(".*~| ",  "", formula)
+
+  # use fitted model to predict values
+  # newdata[[gsub("~.*| ",  "", formula)]] 
+  newdata[[names(model$model)[1]]] = predict(model, newdata, type = "response")
+  
+  # newdata$group = "1" 
+  if (length(names(model$model)) < 3) { newdata[["group"]] = "group" }
+
+  p = NULL; if (add_plot) {  # plot logistic regression curve
+  p <- ggplot2::ggplot(newdata, 
+                ggplot2::aes(x = .data[[names(model$model)[2]]],
+                             y = .data[[names(model$model)[1]]], 
+                             color = group
+                             )) + # asking it to set the color by the variable "group" is what makes it draw three different lines
+  ggplot2::geom_line(lwd = 2) +
+  ggplot2::geom_point() + 
+  ggplot2::ylab(ylab) + ggplot2::xlab(xlab) +
+  theme_ben() +
+  ggplot2::ggtitle(title)  
+#  ggplot2::labs(x = xlab, y = ylab, title = title) 
+  
+  
+  p.se = ggplot2::ggplot(newdata, ggplot2::aes(
+    x = .data[[names(model$model)[2]]],
+    y = .data[[names(model$model)[1]]],
+    color = group
+    )) +
+    ggplot2::geom_point(alpha = .5) + ggplot2::theme_classic() + 
+    ggplot2::ggtitle(title) +
+    ggplot2::ylab(ylab) + ggplot2::xlab(xlab) +
+    ggplot2::stat_smooth(method = "glm", se = T, 
+                         method.args = list(family = family), 
+                         col = point.col, lwd = .75, lty = 1)
+  
+  
+#  plot(as.formula(formula), data = data, col = point.col)
+ # lines(as.formula(formula), newdata, lwd = 2)
+  }
+  return(list(model     = model,
+              pred.data = newdata,
+              #data = data,
+              plot      = p,
+              plot.se   = p.se
+              ))
+  }
+}
+```
+
+
+
+```{r}
+# get the blais and brent data
+source(here::here("r", "src", "blais.R"))
+```
+
+```{r}
+############################################################
+### Read Data ##############################################
+############################################################
+#+++++++++++++++++++++++++
+# Function to calculate the mean and the standard deviation
+  # for each group
+#+++++++++++++++++++++++++
+# data : a data frame
+# varname : the name of a column containing the variable
+  #to be summariezed
+# groupnames : vector of column names to be used as
+  # grouping variables
+
+#now in functions.R
+#data_summary <- function(data, varname, groupnames){
+#  summary_func = function(x, col){
+#    c(mean = mean(x[[col]], na.rm = T),
+#      sd   = sd(x[[col]], na.rm = T))
+#  }
+#  data_sum = plyr::ddply(data, groupnames, 
+#                         .fun = summary_func, varname)
+#  data_sum = plyr::rename(data_sum, c("mean" = varname))
+# return(data_sum)
+##}
+
+# numeric
+N <- readr::read_csv(
+  here::here("data", "wai_juror_numeric.csv")) %>%
+  dplyr::filter(., stringr::str_detect(StartDate, "2023")) %>%
+  dplyr::rename(., AvgScore_Risk = DEA3.all.resp)
+
+N %>%
+  dplyr::filter(., StartDate > lubridate::dmy_hms("05-01-2023 00:00:01"))
+
+
+#, Score_Risk = DEA3.resp) #%>%
+#  select(., -c(1:5,8:18))
+# choice data 
+C <- read_csv(
+  here::here("data", "wai_juror_choice.csv")) %>% 
+  dplyr::filter(., stringr::str_detect(StartDate, "2023")) %>%
+#  dplyr::mutate(., Exp = StartDate < lubridate::dmy_hms("2023-04-08 00:00:01"))
+  dplyr::mutate(., Exp =  case_when(
+     StartDate < lubridate::ymd_hms(
+        "2023-04-08 00:00:01") ~ "Exp 1",
+     StartDate >= lubridate::ymd_hms(
+        "2023-04-08 00:00:01") ~ "Exp 2",
+     #others ...
+     TRUE ~ "not coded") # else if not return as NA  
+     ) 
+
+C <- C %>%
+  dplyr::rename(., 
+                AvgScore_Risk = DEA3.all.resp, # The plot for all Scores 
+                Score_Risk    = DEA3.resp      # The plot for the Static Score
+                ) %>%
+  dplyr::select(., -c(1:5,8:18)) %>% 
+  dplyr::mutate(., across(
+    c(AvgScore_Risk, # the full static plot est 
+      Score_Risk,    # the static score plot est 
+      RiskEntry,     # the risk communicated by professional 
+      MinNumEst,     # minimum numeric risk for "Beyond Reasonable Doubt"s
+      #MinNumEst_1,     # minimum categorical risk for "Beyond Reasonable Doubt"
+      RiskNumEst_1, RiskNumEst_2, RiskNumEst_3, RiskNumEst_4, RiskNumEst_5),
+    ~as.numeric(.x))) %>%
+  dplyr::rename(., Duration = `Duration (in seconds)`) %>%
+  dplyr::mutate_at(., c('Duration'), as.numeric) %>%
+  dplyr::mutate(., 
+         Minutes = round(Duration/60, 2),
+         CrimeAcc = ifelse(Crime == "Sexual Offense", 1, 0),
+         DOB     = as.numeric(Age),
+         Age     = (2022 - DOB),
+         BeyondDoubt  = ifelse(tolower(JuryJudge) == "no", 0, 1),
+         RiskCheck_Not_Rem = ifelse( # clean up (a delayed chance to enter the RiskEntry (dropdown))
+           RiskCheck == "Do not remember", "Not Remember", ""), 
+         RiskCheck = ifelse( # clean up
+             RiskCheck == "Do not remember", NA, RiskCheck),
+         RiskCheck = as.numeric(
+           gsub("% risk|a ", "", tolower(RiskCheck))), 
+  ) %>%
+  dplyr::mutate(., Plot = as.factor(recode(PlotType, 
+    "noplot"  = "None", 
+    "default" = "Unweighted",
+    "size"    = "Weighted"))) %>%
+  dplyr::mutate(., JuryJudge = as.numeric(
+    case_when(JuryJudge == "Yes" ~ "1", 
+              JuryJudge == "No" ~ "0") )
+    ) %>%  # fix the non response
+  dplyr::mutate(., 
+      RiskNumEst_1 = ifelse(is.na(RiskNumEst_1), 0, RiskNumEst_1), # recode to be 0 if not responded
+      RiskLevel_1  = ifelse(is.na(RiskNumEst_1), 0, RiskNumEst_1), # recode to be 0 if not responded
+      RiskLevel_2  = ifelse(is.na(RiskNumEst_2), 0, RiskNumEst_2), # recode to be 0 if not responded
+      RiskLevel_3  = ifelse(is.na(RiskNumEst_3), 0, RiskNumEst_3), # recode to be 0 if not responded
+      RiskLevel_4  = ifelse(is.na(RiskNumEst_4), 0, RiskNumEst_4), # recode to be 0 if not responded
+      RiskLevel_5  = ifelse(is.na(RiskNumEst_5), 0, RiskNumEst_5), # recode to be 0 if not responded
+      ) %>%
+  dplyr::relocate(id, .before = 1) %>%
+  dplyr::relocate(Exp, .after = 1) %>%
+  dplyr::relocate(Plot, .after = 2) %>%
+  dplyr::filter(., Finished == "True")
+#  dplyr::select(., -starts_with("DJ")) %>%
+#  dplyr::select(., -starts_with("NC")) 
+
+# calculate the estimate error magnitude
+C <- C %>% dplyr::mutate(
+  AvgScore_Risk_Est_Diff  = AvgScore_Risk - BLAIS_2y_mean,
+  Score_Risk_Est_Diff     = Score_Risk - BRENT_Score2_mean,
+  Score_Risk_Est_Diff_Exp = Score_Risk - 9
+  )
+
+
+# Clean up attention check
+C <- C %>% 
+#  dplyr::mutate(., FailedChecks = case_when(
+#    RiskCheck != 9 ~ 1,  # the initial entry check
+#    RiskEntry != 9 ~ 1,  # the second check
+#    TRUE ~ 0)) %>% 
+    dplyr::mutate(., FailedChecks = ifelse(RiskEntry != 9, 1, 0)) %>%
+    dplyr::mutate(., OrderedRisk = ifelse(
+      RiskNumEst_1 <= RiskNumEst_2 & 
+      RiskNumEst_2 <= RiskNumEst_3 &
+      RiskNumEst_3 <= RiskNumEst_4 &
+      RiskNumEst_4 <= RiskNumEst_5, 1, 0
+      )) #%>% view()
+
+```
+
+A summary of Risk entries for Exp 1. 
+
+```{r}
+mode <- function(x) {
+  names(which.min(table(x)))
+}
+mode(C$RiskEntry)
+
+hist(C$AvgScore_Risk_Est_Diff, 
+     main = paste("mean = ", round(mean(na.omit(C$AvgScore_Risk_Est_Diff)), 2)))
+
+
+C %>%
+  dplyr::filter(., Exp == "Exp 1") %>%
+  dplyr::group_by(., Plot) %>%
+  dplyr::summarise(., 
+    n = dplyr::n(),
+    Mean_Failed_a_Check = round(mean(na.omit(FailedChecks)),2),
+    n_RiskEntry_Corr  = sum(ifelse(RiskEntry == 9, 1, 0)),
+#    Min_RiskCheck  = max(na.omit(RiskCheck)),
+#    Max_RiskCheck  = max(na.omit(RiskCheck)),
+    Min_RiskEntry  = max(na.omit(RiskEntry)),
+    Max_RiskEntry  = max(na.omit(RiskEntry)),
+    Mean_OrderedRisk = round(mean(na.omit(OrderedRisk)),2),
+    ) %>% t() %>% 
+  kbl_it(caption = "Min and Max Risk Entry by Condition")
+```
+
+
+
+```{r}
+C %>% dplyr::filter(., Income == "More than $105,000") %>%
+  select(id)
+C %>% dplyr::filter(., AvgScore_Risk > 50) %>% select(id)
+C %>% dplyr::filter(., id == 14000) %>% view()
+```
+
+Exclusionary criteria
+
+```{r}
+# Clean up Data
+# remove 
+AvgScore_Risk_range <- c(5, 75) # a range for inclusion/ exclusion
+
+C <- C %>% 
+  dplyr::mutate(., 
+           exclusion = case_when(
+             Plot == "None" ~ "include",
+             AvgScore_Risk >= AvgScore_Risk_range[1] &
+             AvgScore_Risk <= AvgScore_Risk_range[2] ~ "include", 
+             #Income != "More than $105,000" ~ 
+            #   "include", #is this real?
+             #Income != "$75,000 - $89,999" ~ 
+            #   "include",  #is this real?
+    TRUE ~ "exclude") 
+    ) #%>% view()
+```
+
+Attention Checks
+
+```{r message=FALSE, warning=FALSE}
+#############################################################
+#### Data Summary ###########################################
+#############################################################
+C %>%
+  #dplyr::filter(., tolower(Crime) == "sexual offense") %>%
+  #dplyr::filter(., RiskEntry == 9) %>%
+  #dplyr::group_by(., RiskEntry) %>%
+  dplyr::filter(., Exp == "Exp 1") %>%
+  dplyr::mutate(., CrimeCorr = ifelse(
+    tolower(Crime) == "sexual offense", 1, 0)
+    ) %>%
+  means1(., CrimeCorr ~ Plot + RiskEntry) %>% 
+  dplyr::select(., Plot, RiskEntry, n, CrimeCorr) %>% #t() %>% 
+  kbl_it(
+    caption = "Attention Check: Mean Correct Crime As a Function of Plot and 'RiskEntry' (9 is correct) ")
+
+C %>%
+  dplyr::filter(., Exp == "Exp 1") %>%
+  #dplyr::filter(., FailedChecks == 0) %>%  # keep no failed checks
+  #dplyr::filter(., OrderedRisk  == 1) %>% # keep ordered risk
+  dplyr::filter(., RiskEntry == 9) %>%
+  dplyr::filter(., !is.na(JuryJudge)) %>%
+  #dplyr::filter(., exclusion == "include") %>% 
+  dim()
+
+C %>%
+  dplyr::filter(., Exp == "Exp 1") %>%
+  #dplyr::filter(., FailedChecks == 0) %>%  # keep no failed checks
+  #dplyr::filter(., OrderedRisk  == 1) %>% # keep ordered risk
+  dplyr::filter(., RiskEntry == 9) %>%
+  dplyr::filter(., !is.na(JuryJudge)) %>%
+  #dplyr::filter(., exclusion == "include") %>%
+  dplyr::mutate(., id = seq(1, length(id))) %>%
+  dplyr::group_by(., Plot) %>%
+  dplyr::summarise(.,
+                   n = dplyr::n(),
+                   RiskEntry_mean = mean(RiskEntry),
+                   RiskEntry_med  = median(RiskEntry),
+                   RiskEntry_min  = min(RiskEntry),
+                   RiskEntry_max  = max(RiskEntry),
+                   ) %>% #t() %>% 
+  kbl_it(caption = "Attention Check: Mean Reported Risk Entry (both acc and inacc)")
+  #means1(., RiskEntry ~ Plot + RiskEntry) %>% 
+  #dplyr::select(., Plot, n, RiskEntry, mdn, min, max) %>% t() %>% 
+ 
+
+###############################################################################
+# Estimate scatterplot for average of all Static-99R
+# They don't yet know the Actual Data
+###############################################################################
+C %>%
+  dplyr::filter(., Exp == "Exp 1") %>%
+  #dplyr::filter(., FailedChecks == 0) %>%  # keep no failed checks
+  #dplyr::filter(., OrderedRisk  == 1) %>% # keep ordered risk
+  dplyr::filter(., RiskEntry == 9) %>%
+  dplyr::filter(., !is.na(JuryJudge)) %>%
+  #dplyr::filter(., exclusion == "include") %>%
+  dplyr::mutate(., id = seq(1, length(id))) %>%
+  means1(., AvgScore_Risk ~ Plot) %>%
+  dplyr::select(., Plot, n, AvgScore_Risk, mdn, min, max, skew) %>%
+  #select(., -mean) %>% 
+  t() %>% kbl_it(caption = 
+      "Mean Scatterplot Estimate for all Static-99R Scores")
+
+
+C %>%
+  dplyr::filter(., Exp == "Exp 1") %>%
+  dplyr::filter(., RiskEntry == 9) %>%
+  dplyr::filter(., !is.na(JuryJudge)) %>%
+  dplyr::select(., Plot, AvgScore_Risk) %>%
+  dplyr::filter(., Plot != "None") %>% #view()
+  #chisq.test(AvgScore_Risk, C$Plot) 
+  t.test(as.numeric(AvgScore_Risk) ~ Plot, paired = F, data = .)
+
+C %>%
+  dplyr::filter(., Exp == "Exp 1") %>%
+  dplyr::filter(., RiskEntry == 9) %>%
+  dplyr::filter(., !is.na(JuryJudge)) %>%
+  dplyr::select(., Plot, AvgScore_Risk) %>%
+  dplyr::filter(., Plot != "None") %>% #view()
+  coin::median_test(formula = AvgScore_Risk ~ Plot, data = .)
+  
+C %>%
+  dplyr::filter(., Exp == "Exp 1") %>%
+  dplyr::filter(., RiskEntry == 9) %>%
+  dplyr::filter(., !is.na(JuryJudge)) %>%
+  dplyr::select(., Plot, AvgScore_Risk) %>%
+  dplyr::filter(., Plot != "None") %>% #view()
+  coin::wilcox_test(formula = AvgScore_Risk ~ Plot, data = ., distribution = "exact", conf.int = T)
+  
+t_obs <- C %>%
+  dplyr::filter(., Exp == "Exp 1") %>%
+  dplyr::filter(., RiskEntry == 9) %>%
+  dplyr::filter(., !is.na(JuryJudge)) %>%
+  dplyr::select(., Plot, AvgScore_Risk) %>%
+  dplyr::filter(., Plot != "None") %>%
+  infer::specify(AvgScore_Risk ~ Plot, x = .) %>%
+  infer::calculate(stat = "diff in means", order = c("Unweighted", "Weighted"))
+
+C %>%
+  dplyr::filter(., Exp == "Exp 1") %>%
+  dplyr::filter(., RiskEntry == 9) %>%
+  dplyr::filter(., !is.na(JuryJudge)) %>%
+  dplyr::select(., Plot, AvgScore_Risk) %>%
+  dplyr::filter(., Plot != "None") %>%
+  infer::specify(AvgScore_Risk ~ Plot, x = .) %>%
+  infer::hypothesize(null = "independence") %>%
+  infer::generate(reps = 1000, type = "permute") %>%
+  infer::calculate(stat = "diff in means", order = c("Unweighted", "Weighted")) %>%
+  infer::visualize() + 
+  infer::shade_p_value(t_obs, direction = "two-sided")
+```
+
+
+```{r}
+C %>%
+  dplyr::filter(., Exp == "Exp 1") %>%
+  #dplyr::filter(., FailedChecks == 0) %>%  # keep no failed checks
+  #dplyr::filter(., OrderedRisk  == 1) %>% # keep ordered risk
+  dplyr::filter(., RiskEntry == 9) %>%
+  dplyr::filter(., !is.na(JuryJudge)) %>%
+  #dplyr::filter(., exclusion == "include") %>%
+  dplyr::mutate(., id = seq(1, length(id))) %>%
+  ggplot(., aes(x = AvgScore_Risk, fill = Plot)) +
+  geom_density(alpha = 0.5) + theme_minimal() 
+
+
+##########################################################################
+# Estimate scatterplot for Static-99R for the defendant
+# They don't yet know the Actual Data
+##########################################################################
+C %>%
+  dplyr::filter(., Exp == "Exp 1") %>%
+  #dplyr::filter(., FailedChecks == 0) %>%  # keep no failed checks
+  #dplyr::filter(., OrderedRisk  == 1) %>% # keep ordered risk
+  dplyr::filter(., RiskEntry == 9) %>%
+  dplyr::filter(., !is.na(JuryJudge)) %>%
+  #dplyr::filter(., exclusion == "include") %>%
+  dplyr::mutate(., id = seq(1, length(id))) %>%
+  means1(., Score_Risk ~ Plot) %>% 
+  dplyr::select(., Plot, n, mean, mdn, min, max, skew) %>%
+  #select(., -Score_Risk) %>% 
+  t() %>% kbl_it(caption = 
+    "Mean Scatterplot Estimate for Defendant's Static-99R Score")
+```
+
+Juror Commitment Decisions
+
+```{r}
+# Juror Decision
+C %>% 
+  dplyr::filter(., Exp == "Exp 1") %>%
+  #dplyr::filter(., FailedChecks == 0) %>%  # keep no failed checks
+  #dplyr::filter(., OrderedRisk  == 1) %>% # keep ordered risk
+  dplyr::filter(., CrimeAcc == 1) %>%   # correct crime
+  dplyr::filter(., RiskEntry == 9) %>%  # correct risk reported
+  dplyr::filter(., !is.na(JuryJudge)) %>% 
+  #dplyr::filter(., exclusion == "include") %>%
+  dplyr::mutate(., id = seq(1, length(id))) %>%
+  #dplyr::select(., Plot, JuryJudge) %>% view()
+  dplyr::group_by(., Plot) %>%
+  dplyr::summarise(., 
+            n = dplyr::n(),
+            yes = sum(JuryJudge, na.rm = T),
+            mean = yes/n) %>% t() %>% 
+  kbl_it(caption = "Commitment Decisions by Condition")
+
+C %>%
+  dplyr::filter(., Exp == "Exp 1") %>%
+  #dplyr::filter(., FailedChecks == 0) %>%  # keep no failed checks
+  #dplyr::filter(., OrderedRisk  == 1) %>% # keep ordered risk
+  dplyr::filter(., CrimeAcc == 1) %>%   # correct crime
+  dplyr::filter(., RiskEntry == 9) %>%  # correct risk reported
+  dplyr::filter(., !is.na(JuryJudge)) %>%
+  #dplyr::filter(., exclusion == "include") %>%
+  dplyr::mutate(., id = seq(1, length(id))) %>%
+  means1(., JuryJudge ~ Plot) %>% 
+  dplyr::select(., Plot, n, mean, mdn, min, max, skew) %>% t() %>%
+  kbl_it(
+    caption = "Commitment Decisions by Condition")
+
+# the numeric estimates for risk levels
+
+C %>%
+  dplyr::filter(., Exp == "Exp 1") %>%
+  #dplyr::filter(., FailedChecks == 0) %>%  # keep no failed checks
+  #dplyr::filter(., OrderedRisk  == 1) %>% # keep ordered risk
+  dplyr::filter(., CrimeAcc == 1) %>%   # correct crime
+  dplyr::filter(., RiskEntry == 9) %>%  # correct risk reported
+  dplyr::filter(., !is.na(JuryJudge)) %>%
+  #dplyr::filter(., exclusion == "include") %>%
+  dplyr::mutate(., id = seq(1, length(id))) %>%
+  #means1(., JuryJudge ~ Plot) %>% 
+  #select(., Plot, n, mean, mdn, min, max, skew) %>%
+  #rename(.data, Commit = mean) #%>%
+  data_summary(., varname = "JuryJudge", groupnames = c("Plot")) %>%
+  ggplot(., aes(x = Plot, y = JuryJudge)) + 
+  geom_bar(stat = "identity", 
+           #color = "black", 
+           position = position_dodge()
+           ) + 
+  #geom_errorbar(aes(ymin = JuryJudge-sd, ymax=JuryJudge+sd),width = .2,position = position_dodge(.9)) +
+  scale_y_continuous(limits = c(0.0, 0.5), n.breaks = 10) + 
+  labs(y = "Commitment Decision\n (% Yes)", 
+       x = "Plot Communication Format") +
+  theme_classic() 
+
+```
+
+MinNumEst
+
+```{r}
+C %>%
+  dplyr::filter(., Exp == "Exp 1") %>%
+  dplyr::filter(., CrimeAcc == 1) %>%   # correct crime
+  dplyr::filter(., RiskEntry == 9) %>%  # correct risk reported
+  dplyr::filter(., !is.na(JuryJudge)) %>%
+  dplyr::group_by(., Plot) %>%
+  dplyr::summarise(.,
+                   MinNum_BRD = mean(MinNumEst),
+                   #MinCat_BRD = mean(MinNumEst_2),
+                   ) %>%
+   kbl_it(
+    caption = "Minimum Recidivism Risk Estimate for Beyond Reasonable Doubt")
+  
+
+C <- C %>%
+  dplyr::filter(., Exp == "Exp 1") %>%
+  dplyr::mutate(., MinNumEst_2 = gsub(" Risk", "", MinNumEst_2)) %>%
+  dplyr::mutate(., MinCat_BRD = factor(
+    MinNumEst_2, levels = c("Very Low", 
+                            "Below Average",
+                            "Average", 
+                            "Above Average",
+                            "Well Above Average"))
+  ) %>% 
+  dplyr::mutate(., MinCat_BRD_num = case_when(
+    MinCat_BRD == "Very Low" ~ 1,
+    MinCat_BRD == "Below Average" ~ 2,
+    MinCat_BRD == "Average" ~ 3,
+    MinCat_BRD == "Above Average" ~ 4,
+    MinCat_BRD == "Well Above Average" ~ 5,
+  ))
+#%>% view()
+C %>%
+  dplyr::filter(., Exp == "Exp 1") %>%
+  select(., Plot, MinNumEst, MinCat_BRD_num) %>%
+  group_by(., Plot) %>%
+  summarize(., corr = cor(MinNumEst, MinCat_BRD_num, 
+                          method = "kendall")) %>% 
+  kbl_it(caption = "Kendall Correlation 'MinNumEst & MinCat_BRD_num'")
+  
+count_2_prop <- function(data, group, x) {
+  data %>%
+    dplyr::group_by(.data[[group]]) %>%
+    dplyr::count(.data[[x]]) %>%
+    dplyr::mutate(prop = n/sum(n),
+                  perc = n/sum(n) * 100
+                  )  
+}
+
+#C %>% count_2_prop(data = ., "Plot", "MinCat_BRD")
+
+C %>%
+  dplyr::filter(., Exp == "Exp 1") %>%
+  dplyr::filter(., CrimeAcc == 1) %>%   # correct crime
+  dplyr::filter(., RiskEntry == 9) %>%  # correct risk reported
+  dplyr::filter(., !is.na(JuryJudge)) %>%
+  count_2_prop(data = ., "Plot", "MinCat_BRD") %>%
+  ggplot(data = ., aes(x = MinCat_BRD, y = prop)) +
+  geom_bar(aes(fill = Plot), colour = "black", 
+           width = .8, stat = "identity"#, position = "stack"
+      ) + coord_flip() + 
+  geom_text(aes(x = MinCat_BRD, 
+                y = prop,
+                label = round(prop,2)
+                #label = paste0(round(prop,2), " (", round(perc, 1),"%)")
+                , hjust = +1
+                         
+                         )) +
+  facet_wrap(~Plot) + theme_classic() + 
+  theme(legend.position = "none") +
+  ggtitle("Minimum Recidivism Risk Category for Beyond Reasonable Doubt")
+
+```
+
+Main Plot: Risk Estimates by Plot Communication
+
+```{r}
+C %>%
+  dplyr::select(., starts_with("RiskNumEst_"))
+
+mean_Levels <- C %>%
+  dplyr::mutate(., id = seq(1, length(id))) %>%
+  dplyr::group_by(., Plot) %>%
+  dplyr::summarise(., across(starts_with(
+    "RiskNumEst_"), ~mean(.x, na.rm = T), .names = "{.col}")) %>%
+  tidyr::pivot_longer(
+    cols = c(RiskNumEst_1, RiskNumEst_2,
+             RiskNumEst_3, RiskNumEst_4, RiskNumEst_5), 
+    names_to = "Level", 
+    values_to = "Risk"
+  ) %>% 
+  dplyr::mutate(., Level = gsub("RiskNumEst_", "", Level)) %>%
+  dplyr::select(., c(Plot, Level, Risk))
+
+summary_Levels <- C %>%
+  dplyr::mutate(., id = seq(1, length(id))) %>%
+  dplyr::select(., c(id, Plot, 
+                     RiskNumEst_1, RiskNumEst_2, RiskNumEst_3, 
+                     RiskNumEst_4, RiskNumEst_5)) %>%
+  tidyr::pivot_longer(
+    cols = c(RiskNumEst_1, RiskNumEst_2, RiskNumEst_3,
+             RiskNumEst_4, RiskNumEst_5), 
+    names_to = "Level", 
+    values_to = "Risk"
+  ) %>% 
+  dplyr::group_by(., Plot, Level) %>%
+  dplyr::summarise(., 
+            #Risk = mean(na.omit(Risk)),
+            Risk = median(na.omit(Risk)) 
+            ) %>%
+  dplyr::mutate(., Level = gsub("RiskNumEst_", "", Level))
+
+n_Plot <- C %>%
+  dplyr::filter(., Exp == "Exp 1") %>%
+  dplyr::filter(., CrimeAcc == 1) %>%   # correct crime
+  dplyr::filter(., RiskEntry == 9) %>%  # correct risk reported
+  dplyr::filter(., !is.na(JuryJudge)) %>%
+  dplyr::group_by(., Plot) %>%
+  summarise(., n = dplyr::n()
+            ) 
+#n_Plot
+
+  # plot with ids
+x_labels <- c("Well Below Avg.", "Below Avg.", "Average", "Above Avg.", "Well Above Avg.")
+cols <- c("black", "blue", "green")
+cbPalette <- c("#999999", "#E69F00", "#56B4E9", "#009E73",
+               "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+cols <- c("#56B4E9", "#009E73", "#CC79A7")
+cols <- c("#0072B2", "#E69F00", "#D55E00")
+cols <- c("grey", "red", "blue")
+cols <- c("#737373", "#FA2D56", "#2D7FFA") #  "#96B3F2", "#F27981")
+# The palette with black:
+cbbPalette <- c("#000000", "#E69F00", "#56B4E9", "#009E73",
+                "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+
+#C %>%
+#  filter(., exclusion == "include") %>%
+#  select(., id, RiskNumEst_1, RiskNumEst_2, RiskNumEst_3,
+#         RiskNumEst_4, MinNumEst, MinNumEst_2, MinNumEst_3) %>%
+#  view()
+
+risk_plot_exp1 <- C %>%
+  dplyr::filter(., Exp == "Exp 1") %>%
+  #dplyr::filter(., FailedChecks == 0) %>%  # keep no failed checks
+  #dplyr::filter(., OrderedRisk  == 1) %>% # keep ordered risk
+  #dplyr::filter(., exclusion == "include") %>%
+  #dplyr::filter(., Plot %in% c("None")) %>%
+  dplyr::filter(., CrimeAcc == 1) %>%   # correct crime
+  dplyr::filter(., RiskEntry == 9) %>%  # correct risk reported
+  dplyr::filter(., !is.na(JuryJudge)) %>%
+  dplyr::mutate(., id = seq(1, length(id))) %>%
+  dplyr::select(., -Risk) %>%
+  dplyr::filter(., RiskNumEst_1 < 90) %>%
+  tidyr::pivot_longer(
+    cols = c(RiskNumEst_1, RiskNumEst_2, RiskNumEst_3,
+             RiskNumEst_4, RiskNumEst_5), 
+    names_to = "Level", 
+    values_to = "Risk"
+  ) %>% 
+  dplyr::mutate(., Level = gsub("RiskNumEst_", "", Level)) %>%
+  dplyr::select(., c(id, Plot, Level, Risk)) %>% 
+  #group_by(., Plot) %>%
+  #mutate(., Level = gsub("RiskNumEst_", "", Level)) %>%
+  ggplot(., aes(x = Level, y = Risk, color = Plot)
+         ) +
+  #geom_line() + 
+  geom_jitter(width = .2, height = 1.5, size = 1.5,
+              alpha = .5, 
+              #shape = 21#,
+              #aes(color = Plot)
+              ) #+ 
+  #geom_line(inherit.aes = T, 
+  #          aes(group = id), 
+  #          position = position_jitter(seed = 1), 
+  #          size = .4, linetype = 2, alpha = 0.8) +
+  # the group level line and points
+
+risk_plot_mean <- risk_plot_exp1 + 
+  geom_point(data = mean_Levels, inherit.aes = F, 
+             alpha = .8, size = 4, shape = 21, 
+             aes(x = Level, y = Risk, 
+                 #group = Plot, 
+                 fill  = Plot), 
+             #fill = Plot, #rep(cols,4), 
+             color = "black", 
+             ) +  
+  geom_line(data = mean_Levels, inherit.aes = F, 
+            alpha = .5, size = 1.5, #linetype = 4,
+            aes(x = Level, y = Risk, 
+                group = Plot, 
+                color = Plot,
+                )
+            ) #+
+  #scale_color_manual(values = cols) +
+  #ggrepel::geom_text_repel(max.overlaps = 100, aes(label = id), size = 3, color = "gray", segment.colour = NA) +
+
+risk_plot_median <- risk_plot_exp1 + 
+  geom_point(data = summary_Levels, inherit.aes = F, 
+             alpha = .8, size = 4, shape = 21, 
+             aes(x = Level, y = Risk, 
+                 #group = Plot, 
+                 fill  = Plot), 
+             #fill = Plot, #rep(cols,4), 
+             color = "black", 
+             ) +  
+  geom_line(data = summary_Levels, inherit.aes = F, 
+            alpha = .5, size = 1.5, #linetype = 4,
+            aes(x = Level, y = Risk, 
+                group = Plot, 
+                color = Plot,
+                )
+            ) #+
+
+
+risk_plot_mean <- risk_plot_mean +  
+  labs(fill = 'Plot',
+       y = "Minimum Risk Percentage\n (mean)",
+       x = "Categorical Risk Label") +
+  scale_x_discrete(labels = x_labels) +
+  scale_y_continuous(n.breaks = 20, limits = c(5, 90)) +
+  theme_classic() +
+  theme(axis.line = 
+          element_line(colour = "black", 
+                       size = 1, linetype = "solid"),
+        axis.title = element_text(size = 14, face = "bold"), 
+        axis.text  = element_text(size = 14),
+        strip.text.y = element_text(size = 12),
+        aspect.ratio = 1/1,
+  #      legend.position = "none"
+  ) + 
+  scale_color_manual(values = cols) +
+  scale_fill_manual(values = cols) 
+
+risk_plot_median <- risk_plot_median +  
+  labs(fill = 'Plot',
+       y = "Minimum Risk Percentage\n (median)",
+       x = "Categorical Risk Label") +
+  scale_x_discrete(labels = x_labels) +
+  scale_y_continuous(n.breaks = 20, limits = c(5, 90)) +
+  theme_classic() +
+  theme(axis.line = 
+          element_line(colour = "black", 
+                       size = 1, linetype = "solid"),
+        axis.title = element_text(size = 14, face = "bold"), 
+        axis.text  = element_text(size = 14),
+        strip.text.y = element_text(size = 12),
+        aspect.ratio = 1/1,
+  #      legend.position = "none"
+  ) + 
+  scale_color_manual(values = cols) +
+  scale_fill_manual(values = cols) 
+
+  #scale_fill_manual('Legend Title', 
+  #                  values = c('gray', 'green', "blue")
+  #                  )
+
+risk_plot_mean
+risk_plot_median
+gridExtra::grid.arrange(risk_plot_mean, risk_plot_median, ncol = 2)
+
+```
+
+
+```{r}
+C %>%
+  #dplyr::filter(., FailedChecks == 0) %>%  # keep no failed checks
+  dplyr::filter(., Exp == "Exp 1") %>%
+  dplyr::filter(., OrderedRisk  == 1) %>% # keep ordered risk
+  dplyr::filter(., CrimeAcc == 1) %>%   # correct crime
+  dplyr::filter(., RiskEntry == 9) %>%  # correct risk reported
+  dplyr::filter(., !is.na(JuryJudge)) %>%
+  #dplyr::filter(., exclusion == "include") %>%
+  ggplot(., aes(x = RiskNumEst_1, fill = Plot)) +
+  geom_density(alpha = 0.5) + theme_minimal() 
+
+
+#C %>%
+ # dplyr::filter(., Plot == "None") %>%
+#hist(C[Plot == "None", "RiskNumEst_1"], breaks = 20)
+
+  #summarise(., across(where(is.numeric), ~ mean(.x, na.rm = TRUE), .names = "{.col}"))
+
+
+C %>% 
+  dplyr::filter(., Exp == "Exp 1") %>%
+  dplyr::filter(., CrimeAcc == 1) %>%   # correct crime
+  dplyr::filter(., RiskEntry == 9) %>%  # correct risk reported
+  dplyr::filter(., !is.na(JuryJudge)) %>%
+  #dplyr::filter(., exclusion == "include") %>%
+  means1(., RiskNumEst_1 ~ Plot) %>% kbl_it(
+    caption = "Commitment Decisions by Condition")
+
+C %>% 
+  dplyr::filter(., Exp == "Exp 1") %>%
+  dplyr::filter(., exclusion == "include") %>%
+  means1(., RiskNumEst_2 ~ Plot) %>% kbl_it(
+    caption = "Commitment Decisions by Condition")
+
+C %>% 
+  dplyr::filter(., Exp == "Exp 1") %>%
+  dplyr::filter(., exclusion == "include") %>%
+  means1(., RiskNumEst_3 ~ Plot) %>% kbl_it(
+    caption = "Commitment Decisions by Condition")
+C %>% 
+  dplyr::filter(., Exp == "Exp 1") %>%
+  dplyr::filter(., exclusion == "include") %>%
+  means1(., RiskNumEst_4 ~ Plot) %>% kbl_it(
+    caption = "Commitment Decisions by Condition")
+
+C %>%
+  dplyr::filter(., Exp == "Exp 1") %>%
+  means1(., RiskNumEst_5 ~ Plot) %>% 
+  kbl_it(
+    caption = "Commitment Decisions by Condition")
+```
+
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+#DAT <- read.csv(paste(
+#  dat_dir, "/jurorRandValue-1-31-numeric.csv", sep = "/"), 
+#  header = T)
+
+#DAT <- DAT[ -c(1,2),]
+NC = N[ , grep("NC_", names(N))]
+DJ = N[ , grep("DJ",  names(N))]
+
+#DAT <- read.csv(paste(
+#  data_dir, "/jurorRandValue-1-31.csv",
+#  sep = "/"), header = T)
+
+qual_vars = c("Crime", "Age", "Vote", "Jury", "Educ", 
+              "Job", "Income", "Political", "Race", "Sex",
+              "JuryJudge", "RiskCheck", "Risk", "RiskValue",
+              "PlotType")
+
+#DAT <- DAT[-c(1:2), ] # remove junky first rows
+
+DAT <- DAT %>% 
+  dplyr::select(-c(StartDate, Status, IPAddress, Finished,
+                   RecordedDate, ResponseId, RecipientLastName,
+                   RecipientFirstName, RecipientEmail,
+                   ExternalReference,
+                   LocationLatitude, LocationLongitude,
+                   DistributionChannel,
+                   UserLanguage, Name)
+                ) %>%
+  #  dplyr::mutate(dplyr::across(, ~as.numeric(.))) %>%
+  dplyr::mutate(
+    subid   = as.numeric(id),
+    Minutes = as.numeric(Duration..in.seconds.)/60,
+    CrimeAcc = ifelse(Crime == "Sexual Offense", 1, 0),
+    DOB     = as.numeric(Age),
+    Age     = (2022 - DOB),
+    BeyondDoubt  = ifelse(tolower(JuryJudge) == "no", 0, 1),
+    RiskCheck_Not_Rem = ifelse(RiskCheck == "Do not remember", 
+                               "Not Remember", ""), # clean up
+    RiskCheck = ifelse(RiskCheck == "Do not remember", NA,
+                       RiskCheck),
+    RiskCheck = as.numeric(gsub("% risk", "", RiskCheck)), # clean up
+    RiskCheck = ifelse(subid %in% c(15137), 0, RiskCheck), 
+    
+    RiskValue = as.numeric(gsub("% risk likelihood", "", RiskValue)),#    RiskNum   = ifelse(RiskCheck == ""),
+    RiskCheckAcc  = ifelse(
+      as.numeric(RiskValue) == as.numeric(RiskCheck), 1, 0),
+    RiskCheckDiff = (as.numeric(RiskValue) - as.numeric(RiskCheck)),
+    Crime         = ifelse(Crime == "", "NA", Crime),
+    
+    Political = ifelse(Political == "", "NA", Political),
+    Sex       = ifelse(Sex == "", "NA", Sex),
+    Race       = ifelse(Race == "", "NA", Race),
+    Educ       = ifelse(Educ == "", "NA", Educ),
+    Jury       = ifelse(Jury == "", "NA", Jury),
+    
+#    MinNumEst   = as.numeric(MinNumEst),
+ #   MinNumEst_2 = as.numeric(MinNumEst_2),
+  #  MinNumEst_3 = as.numeric(MinNumEst_3),
+    #RiskVal2Label = as.numeric(RiskVal2Label), # no need to recode
+   # RiskNumEst = 0,
+    ) %>% 
+  dplyr::filter(!is.na(subid))
+
+
+
+# reorder
+var_order = c("subid", "Age", "DOB", "Vote", "Jury", "Educ", "Job", 
+              "Income", "Political", "Race", "Sex", "Minutes", 
+              "RiskValue", "RiskEntry", "RiskCheck", "RiskCheckAcc",
+              "Crime", "CrimeAcc", "BeyondDoubt")
+var_order = c(var_order, names(DAT)[names(DAT) %in% var_order == F])
+
+
+
+
+
+DAT <- DAT[!is.na(DAT$subid), var_order]
+DAT$Sample = "Sample"
+kbl_it_table(DAT$Sample, caption = "Sample Size", freq = T, percent = F)$table
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+view(DAT, show = 1)
+
+#DAT %>% dplyr::group_by(RiskValue) 
+```
+
+
+### Identification of Correct Crime and Risk 
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+kbl_it_table(DAT$Crime, caption = "Crime Identification", percent = F)$table
+
+#histPlot(DAT$RiskCheckAcc)
+
+#view(DAT[,c("subid", "RiskValue", "RiskCheck", "RiskCheckAcc")])
+
+DAT %>% dplyr::summarise(Prob= mean(na.omit(RiskCheckAcc))) %>% 
+  kbl_it(caption = "Risk Value Identification")
+
+```
+
+
+### Time to Complete 
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+histPlot(DAT$Minutes)
+```
+
+
+### Exclusion?
+
+There are `r true_count(DAT$RiskCheckAcc)` participants who did not select the correct risk value. 
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+if (do_exclusion) {
+# Remove 
+DAT2 <- DAT %>% 
+  dplyr::filter(
+    RiskCheckAcc == 1,
+    Minutes < 60
+  )
+#DAT <- DAT %>% dplyr::filter(RiskCheckAcc == 1)
+
+kbl_it_table(DAT$Crime, caption = "Crime Identification", percent = F)$table
+kbl_it_table(DAT$Sample, caption = "Sample Size", freq = T, percent = F)$table
+histPlot(DAT$Minutes)
+}
+```
+
+
+
+### Demographics 
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+kbl_it_table(DAT$Age,   caption = "", freq = T, percent = F)$table
+kbl_it_table(DAT$Age,   caption = "", percent = T)$table
+
+kbl_it_table(DAT$Political, caption = "", percent = T)$table
+kbl_it_table(DAT$Educ, caption = "", percent = T)$table
+
+kbl_it_table(DAT$Jury, caption = "", percent = T)$table
+kbl_it_table(DAT$Race, caption = "", percent = T)$table
+kbl_it_table(DAT$Sex,  caption = "", percent = T)$table
+#kbl_it_table(DAT$Job, caption = "", percent = T)
+#
+
+(table(DAT$Political, DAT$Sex)) %>% kbl_it(caption = "")
+round(prop.table(table(DAT$Political, DAT$Sex))*100,1) %>% kbl_it(caption = "Percentages")
+
+(table(DAT$Political, DAT$RiskValue)) %>% kbl_it(caption = "")
+#round(prop.table(table(DAT$Political, DAT$RiskValue))*100,1) %>% kbl_it(caption = "Percentages")
+
+(table(DAT$Political, DAT$Race)) %>% kbl_it(caption = "")
+
+```
+
+
+
+
+### Committment Decision: Beyond Reasonable Doubt
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+DAT %>%
+  #dplyr::filter(RiskCheckAcc == 1) %>%
+  dplyr::group_by(RiskValue) %>%
+  dplyr::summarise(
+    BeyondDoubt = round(mean(BeyondDoubt),2),
+#    sd = sd(BeyondDoubt),
+    n = dplyr::n(),
+  ) %>% kbl_it(caption = "Commit ~ Risk Level")
+
+#means(DAT, "BeyondDoubt", by = "RiskValue") %>% kbl_it(caption = "Commit ~ Risk")
+means(DAT, "BeyondDoubt", 
+      by = c("Sex", "RiskValue")) %>% kbl_it(caption = "Commit ~ Sex & RV")
+means(DAT, "BeyondDoubt", by = c("Sex")) %>% kbl_it(caption = "Commit ~ Sex")
+
+means(DAT, "BeyondDoubt", by = c("Political", "RiskValue")) %>% 
+  kbl_it(caption = "Commit ~ Pol & RV")
+means(DAT, "BeyondDoubt", 
+      by = c("Political")) %>% kbl_it(caption = "Commit ~ Political")
+
+means(DAT, "BeyondDoubt", by = c("Race")) %>% kbl_it(caption = "Commit ~ Race")
+means(DAT, "BeyondDoubt", by = c("Race", "RiskValue")) %>% kbl_it(caption = "Commit ~ Race")
+
+
+head(DAT)
+
+```
+
+
+### Risk Value Provided to Individual
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+means(DAT, "BeyondDoubt", by = "RiskValue") %>% #[,c("RiskValue", "mean", "mdn")] %>%
+  kbl_it(caption = "Commit ~ Risk (by subid)")
+
+if (include_plots) {
+ggplot2::ggplot(DAT, 
+                ggplot2::aes(x = .data[["RiskValue"]],
+                             y = .data[["BeyondDoubt"]]#, 
+                             #color = group
+                             )) + # asking it to set the color by the variable "group" is what makes it draw three different lines
+  ggplot2::ylab("P (Beyond a Reasonable Doubt)") +  ggplot2::xlab("Risk Value") + 
+  ggplot2::geom_line(lwd = 2) +
+  ggplot2::geom_point() + 
+  #ggplot2::theme_classic() +
+  theme_ben() +
+  ggplot2::ggtitle("Committ ~ RiskValue (by individuals)")
+}
+
+# https://stackoverflow.com/questions/12953045/warning-non-integer-successes-in-a-binomial-glm-survey-packages
+
+mod.i = glm_modPlot(formula = "BeyondDoubt ~ RiskValue", 
+                data = DAT, 
+                title = "Predicted Model Based on Individuals",
+                #family = "gaussian",
+                family = "binomial",
+                #family = "quasibinomial",
+                add_plot = T, 
+                ylab = "P (Beyond a Reasonable Doubt)", xlab = "Risk Value", 
+                point.col = "blue")
+
+if (include_plots) {
+gtsummary::tbl_regression(mod.i$model, exponentiate = T)
+#mod.i$plot
+mod.i$plot.se
+}
+#m$plot
+#m$pred.data
+#
+
+
+```
+
+### Grouped by Risk Value Provided
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+#m = glm_modPlot(formula = "vs ~ hp", data = mtcars, family = "binomial",
+ #               add_plot = T, point.col = "green")
+
+GROUPED <- DAT %>%
+  dplyr::filter(RiskCheckAcc == 1) %>%
+  dplyr::group_by(RiskValue) %>%
+  dplyr::summarise(
+    n   = dplyr::n(),
+    BeyondDoubt = mean(BeyondDoubt),
+    sd   = sd(BeyondDoubt),
+    se   = sd(BeyondDoubt)/sqrt(dplyr::n()),
+    mdn  = median(BeyondDoubt),
+    
+  )
+
+
+library(correlation)
+GROUPED %>%
+  dplyr::select(RiskValue, BeyondDoubt) %>%
+  correlation()
+
+GROUPED %>% kbl_it(caption = "Commit ~ Risk (by Mean Risk Value)")
+
+#means(GROUPED, "BeyondDoubt", by = "RiskValue")[,c("RiskValue", "mean", "mdn", "n")] %>%
+#  kbl_it(caption = "Commit ~ Risk (by Mean Risk Value)")
+
+
+if (include_plots) {
+ggplot2::ggplot(GROUPED, 
+                ggplot2::aes(x = .data[["RiskValue"]],
+                             y = .data[["BeyondDoubt"]]#, 
+                             #color = group
+                             )) + # asking it to set the color by the variable "group" is what makes it draw three different lines
+  ggplot2::geom_line(lwd = 2) +
+  ggplot2::ylab("P (Beyond a Reasonable Doubt)") +  ggplot2::xlab("Risk Value") + 
+  ggplot2::geom_point() + 
+  ggplot2::theme_classic() +
+  ggplot2::ggtitle("Committ ~ RiskValue (Mean by Risk Value)")
+
+}
+
+mod.g = glm_modPlot(formula = "BeyondDoubt ~ RiskValue", 
+                data = GROUPED, 
+                family = "binomial",
+                title = "Predicted Model Based on Risk Value Group",
+                add_plot = T, 
+                ylab = "P (Beyond a Reasonable Doubt)", xlab = "Risk Value", 
+                point.col = "blue")
+
+
+if (include_plots) {
+gtsummary::tbl_regression(mod.g$model, exponentiate = T)
+#mod.g$plot
+mod.g$plot.se
+}
+
+
+#fit logistic regression model
+#model <- glm(vs ~ hp, data = mtcars, family = "binomial")
+#m = lm(wt ~ vs, data = mtcars)
+#names(m$model)[1]
+
+#plot logistic regression curve
+#plot(vs ~ hp, data=mtcars, col = "steelblue")
+#lines(vs ~ hp, newdata, lwd = 2)
+```
+
+### Model Examination
+
+```{r message=FALSE, warning=FALSE}
+# https://www.statology.org/logistic-regression-in-r/
+```
+
+### Sample Comparison
+
+```{r}
+# https://www.statology.org/jaccard-similarity-in-r/
+# https://en.wikipedia.org/wiki/Jaccard_index
+```
+
+
+```{r eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+library(survival)
+ovarian = survival::ovarian
+head(ovarian)
+S1 = with(ovarian, survival::Surv(futime, fustat))
+S1
+fit1 = survival::survfit(S1)
+
+summary(fit1)
+
+plot(fit1,xlab="t",ylab=expression(hat(S)*"(t)"))
+  
+          
+          
+```
+
+
+```{r eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+#https://blogs.uoregon.edu/rclub/2016/04/05/plotting-your-logistic-regression-models/
+#mod <- with(DAT, glm(BeyondDoubt ~ RiskValue, family = binomial("logit"))) # factor(sex),
+#mod <- with(DAT, glm(BeyondDoubt ~ RiskValue, family = binomial)) # factor(sex),
+
+mod = glm(formula = BeyondDoubt ~ RiskValue, 
+    family = "binomial", data = DAT, na.action = "na.exclude")
+
+#anova(mod, test = "Chisq")
+
+# save the coefficient values so we can use them in the equations
+b0 <- mod$coef[1] # intercept
+X1 <- mod$coef[2]
+
+X1_range <- seq(from = min(DAT$RiskValue), to = max(DAT$RiskValue), by = .01)
+
+a_logits <- b0 + X1 * X1_range
+#b_logits <- b0 + X1 * X1_range 
+
+a_probs <- exp(a_logits)/(1 + exp(a_logits))
+#b_probs
+
+plot(X1_range, a_probs, 
+     ylim = c(0,1),
+     type = "l", 
+     lwd  = 3, 
+     lty  = 2, 
+     col  = "blue", 
+     xlab = "Risk Value", 
+     ylab = "P(Yes)", main = "Probability of having BRD")
+
+# add a horizontal line at p=.5
+abline(h = .5, lty = 2)
+
+
+#library(ggplot2); library(tidyr)
+# first you have to get the information into a long dataframe, which is what ggplot likes :)
+plot.data <- data.frame(a = a_probs, X1 = X1_range)
+plot.data <- tidyr::gather(plot.data, key = group, value = prob, a)
+#head(plot.data)
+
+
+ggplot2::ggplot(plot.data, 
+                ggplot2::aes(x = X1, y = prob, color = group)) + # asking it to set the color by the variable "group" is what makes it draw three different lines
+  ggplot2::geom_line(lwd = 2) + ggplot2::theme_classic() +
+  ggplot2::labs(x = "Risk Value", 
+                y = "P(outcome)", title = "Probability of super important outcome") 
+
+```
+
+
+
+
+```{r eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+#  kmeans plot example
+#  might need tweaking https://stackoverflow.com/questions/50143207/returning-a-ggplot-object-from-a-function
+plot_kmeans_pc <- function(feature_matrix, k, pc) {
+    matrix_name = deparse(substitute(feature_matrix)) # name of input variable
+    pclusters   = stats::kmeans(feature_matrix, k, nstart = 100, iter.max = 100)
+    groups      = pclusters$cluster
+    
+    # project data onto two principle comps
+    projected   = stats::predict(pc, newdata = feature_matrix)[,1:2]
+    projected_df <- cbind(as.data.frame(projected), cluster = as.factor(groups))
+    # plot
+    p <- ggplot2::ggplot(projected_df, ggplot2::aes(
+      x = PC1, 
+      y = PC2, 
+      colour = groups)) + 
+           ggplot2::geom_point() + ggplot2::ggtitle(matrix_name)
+
+    return(p)
+} 
+```
+
+
+### Clean Need for Cognition
+
+```{r eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+#+4 = very strong agreement
+#+3 = strong agreement
+#+2 = moderate agreement
+#+1 = slight agreement
+#0 = neither agreement nor disagreement
+#-1 = slight disagreement
+#-2 = moderate disagreement
+#-3 = strong disagreement
+#-4 = very strong disagreement
+
+names(NC) = (gsub("_","", names(NC)))
+NC = sapply(NC, FUN = function(x) { 
+        car::recode(x, "1=-4; 2=-3; 3=-2; 4=-1; 5=0; 6=1; 7=2; 8=3; 9=4")  } )
+nc_reverse = c(3,4,5,7,8,9,12,16,17) # reverse these columns
+NC[, nc_reverse] = sapply(NC[, nc_reverse], FUN = function(x) { 
+        car::recode(x, "-4=4; -3=3; -2=2; -1=1; 0=0; 1=-1; 2=-2; 3=-3; 4=-4")  } )
+NC = data.frame(NC)
+DAT$id
+NC$subid = DAT$id
+NC$Total = sum(NC[1:18])
+view(NC)
+
+DAT[, var_order]
+
+means("Total", data = NC)
+#reverse_code()
+
+need4cog_clean <- function(df, get.id = NULL, abbrev = "NC", plot = T) {
+  NC.cols = names(df)[grep(abbrev, names(df))]
+  if (length(NC.cols) > 18) { 
+    message(paste0("Warning: There are too many variables. ",
+                   "Need for Cognition has only 18 questions and your data frame has ",
+                   length(NC.cols)))
+  } else {
+    if (length(NC.cols) > 0) { # if there are column in the data frame
+      nc_vars = paste0("NC", seq(1:18))
+      #c("1", "2", "moderately disagree",
+      #            "slightly disagree", "neutral", "slight agree", 
+      #            "moderately agreem", "strongly agree", "very strongly agree")
+      NC = df[, NC.cols]
+      NC = sapply(NC, as.numeric)  # make numeric
+      # recode values
+      NC = sapply(NC, FUN = function(x) { 
+        car::recode(x, "1=-4; 2=-3; 3=-2; 4=-1; 5=0; 6=1; 7=2; 8=3; 9=4")  } )
+
+      NC = as.data.frame(NC)
+      # rename to question numbers
+      names(NC) = paste0(gsub(paste0(abbrev,".*"), abbrev, names(NC)), (1:length(names(NC))))
+      
+      NC[,nc_vars] = NC[, 1:18] # get new names for raw responses before reverse coding for composite scores
+      
+      
+      if (plot) {
+      #  plot(gplot_likert(NC[,nc_vars], title = "NC", 
+      #                    points.no.neutral = 8, neutral.point = 0))
+      }
+      
+      # reverse scoring variables
+      nc_reverse = c(3,4,5,7,8,9,12,16,17) # reverse these columns
+    
+      NC[, nc_reverse] = sapply(NC[, nc_reverse], FUN = function(x) { 
+        car::recode(x, "-4=4; -3=3; -2=2; -1=1; 0=0; 1=-1; 2=-2; 3=-3; 4=-4")  } )
+
+      ############### big 5 ###########################################################
+      #TIPI$extraversion             = rowMeans(TIPI[,names(TIPI)[c(1,6)]])
+      #TIPI$agreeableness            = rowMeans(TIPI[,names(TIPI)[c(2,7)]])
+      #TIPI$conscientiousness        = rowMeans(TIPI[,names(TIPI)[c(3,8)]])
+      #TIPI[,"emotional stability"]  = rowMeans(TIPI[,names(TIPI)[c(4,9)]])
+      #TIPI$openness                 = rowMeans(TIPI[,names(TIPI)[c(5,10)]])
+      #TIPI$tipi_total_score         = rowMeans(TIPI[,names(TIPI)[1:10]])
+      
+      if (!is.null(get.id)) { NC <- cbind(subid = df[,get.id], NC) } 
+      keep_surveys = append(keep_surveys, names(NC) )  # store the keep var names
+      
+      names(NC) = tolower(names(NC))
+
+      return(NC)
+      
+    } else { rm(NC.cols) }
+  }
+}
+
+
+```
+
+
+
+

@@ -1,0 +1,194 @@
+---
+title: "Logistic Regression"
+author: "gcook"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(dplyr)
+library(magrittr)
+library(ggplot2)
+
+proj_path <- "C:/Users/gcook/Sync/Data/wai_juror/"
+data_path <- paste(proj_path, "data", sep = "/")
+data_file <- 'wai_juror_exp1.csv'
+
+# Blais Estimate Data
+source(here::here("r", "src", "blais.R"))
+# BLAIS_2y_mean,
+BLAIS_2y_mean = 9
+# BRENT_Score2_mean,
+BRENT_Score2_mean = 9
+# end 
+
+DAT <- read.csv(paste(data_path, data_file, sep = "/"))
+
+DAT <- DAT %>%
+    select(., id, PlotType, Risk, RiskCheck, CrimeAcc, 
+           Score_Risk, AvgScore_Risk, JuryJudge, 
+           Score_Risk_Est_Diff, AvgScore_Risk_Est_Diff,
+           Score_Risk_Est_Diff_Exp,
+           MinNumEst:MinNumEst_3,
+           RiskNumEst_1:RiskNumEst_5
+           )
+
+DAT <- DAT %>%
+  # all sores
+  mutate(., AvgScore_OverEst = case_when(
+    AvgScore_Risk > BLAIS_2y_mean ~ 1,
+    AvgScore_Risk == BLAIS_2y_mean ~ 0,
+    AvgScore_Risk < BLAIS_2y_mean ~ 0,
+  )) %>%
+  # brent score   
+  mutate(., Score_OverEst = case_when(
+    Score_Risk > BRENT_Score2_mean ~ 1,
+    Score_Risk == BRENT_Score2_mean ~ 0,
+    Score_Risk < BRENT_Score2_mean ~ 0,
+  ))
+
+#DAT %>% view()  
+
+Score_OverEst <- DAT %>%
+  #select(., PlotType, AvgScore_Risk, AvgScore_OverEst, Sc) %>%
+  group_by(., PlotType) %>%
+  summarize(., 
+            Score_Est_mean   = mean(Score_Risk, na.rm = T),
+            Score_Est_median = median(Score_Risk, na.rm = T),
+            Score_OverEst    = sum(Score_OverEst, na.rm = T)/length(na.omit(Score_OverEst)),
+            
+            AvgScore_Est_mean   = mean(AvgScore_Risk, na.rm = T),
+            AvgScore_Est_median = median(AvgScore_Risk, na.rm = T),
+            AvgScore_OverEst    = sum(AvgScore_OverEst, na.rm = T)/length(na.omit(AvgScore_OverEst)),
+  )
+
+#dataframe_to_list <- function(df, by = NULL) {
+#  if (!is.null(by)) {
+#    setNames(split(df, seq(nrow(df))), rownames(df[[by]]))
+#  }
+#  setNames(split(df, seq(nrow(df))), rownames(df))
+#}
+
+#dataframe_to_list(Score_OverEst)
+
+
+# get means of estimtes
+#score_mean   <- mean(DAT$Score_Risk_Diff, na.rm = T)
+#score_median <- median(DAT$Score_Risk_Diff, na.rm = T)
+
+
+## get a list of estimated values
+est_list = list(
+  default = c(Score_OverEst$Score_OverEst[1], Score_OverEst$AvgScore_OverEst[1], 
+              Score_OverEst$Score_Est_mean[1], Score_OverEst$Score_Est_median[1]),
+  noplot = c(Score_OverEst$Score_OverEst[2], Score_OverEst$AvgScore_OverEst[2],  
+             Score_OverEst$Score_Est_mean[2], Score_OverEst$Score_Est_median[2]),
+  size = c(Score_OverEst$Score_OverEst[3], Score_OverEst$AvgScore_OverEst[3],    
+           Score_OverEst$Score_Est_mean[3], Score_OverEst$Score_Est_median[3])
+)
+
+# maybe filter out large estimates?
+p <- DAT %>%
+  filter(., PlotType %in% c("size", "default")) %>%
+  ggplot(data = .) + 
+  geom_histogram(mapping = aes(AvgScore_Risk), 
+                 fill = "white", color = "white", 
+                 binwidth = 5) +
+  labs(x = "Estimtated Risk in 2 Years", y = "Count") +
+  scale_x_continuous(limits = c(-4,95), n.breaks = 20) +
+#  scale_y_continuous(limits = c(0,25), n.breaks = 12) +
+  coord_flip() +
+  see::theme_modern()
+
+p
+
+
+p + 
+  labs(x = "Estimtated Risk in 2 Years", y = "Count") +
+  geom_vline(xintercept = BLAIS_2y_mean, color = "blue") +
+#  annotate("text", x = BLAIS_2y_mean, 
+#           y = 15, 
+#           label = paste("Actual = ", BLAIS_2y_mean), 
+#           color = "blue"
+#           )
+  geom_label(data = data.frame(x = BLAIS_2y_mean, y = 3, 
+                               label = paste("Actual = ", BLAIS_2y_mean)),
+             mapping = aes(x = x, y = y, label = label), color = "white", fill = "blue"
+              )
+
+
+p + 
+  labs(x = "Estimtated Risk in 2 Years", y = "Count") +
+  geom_histogram(mapping = aes(AvgScore_Risk), 
+                 fill = "white", color = "black", 
+                 binwidth = 5) +
+  
+ # geom_vline(xintercept = BLAIS_2y_mean, color = "blue") +
+  #geom_vline(xintercept = mean(DAT$AvgScore_Risk, na.rm = T), color = "red") +
+  geom_label(data = data.frame(x = mean(DAT$AvgScore_Risk, na.rm = T), y = 3, 
+                               label = paste("Median Est. = ", round(median(DAT$AvgScore_Risk, na.rm = T),2))),
+             mapping = aes(x = x, y = y, label = label), color = "white", fill = "black"
+  ) + 
+  geom_label(data = data.frame(x = BLAIS_2y_mean, y = 3, 
+                               label = paste("Actual = ", BLAIS_2y_mean)),
+             mapping = aes(x = x, y = y, label = label), color = "white", fill = "blue"
+              ) +
+  facet_wrap(~PlotType)
+
+#  geom_label(data = data.frame(x = 9, y = 20, label = paste("Actual = ", BLAIS_2y_mean)),
+#             mapping = aes(x = x, y = y, label = label), color = "blue"
+#            
+#              )
+  
+```
+
+See some notes at: https://medium.com/@conankoh/interpreting-results-from-logistic-regression-in-r-using-titanic-dataset-bb9f9a1f644c
+
+
+# **Libraries**
+
+```{r}
+library(dplyr)
+library(performance)
+library(parameters)
+library(caret)
+library(ResourceSelection)
+
+#disable scientific notation for model summary
+options(scipen = 999)
+```
+
+```{r}
+#model <- glm(JuryJudge ~ Score_Risk, data = DAT, family = binomial)
+#summary(model)
+
+
+#exp(coefficients(model))
+#exp(confint(model))
+```
+
+# **Univariate Analysis with a Continuous Predictor**
+
+```{r}
+model <- glm(JuryJudge ~ AvgScore_Risk, data = DAT %>% filter(., PlotType %in% c("size", "default")), family = binomial)
+summary(model)
+model
+```
+
+Exponentiate
+
+```{r}
+exp(coefficients(model))
+exp(confint(model))
+```
+
+```{r}
+ggplot(DAT %>% filter(., PlotType %in% c("size", "default")), 
+       mapping = aes(x = AvgScore_Risk, y = JuryJudge)) + 
+  geom_point(alpha = .5) +
+  stat_smooth(method = "glm", se = FALSE, method.args = list(family = binomial))
+```
