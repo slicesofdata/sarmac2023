@@ -1,0 +1,11 @@
+unlink_html_files <- function() {
+  xfile <- gsub(" ", 
+                "-", 
+                gsub(".qmd", "_files",
+                     basename(this.path::this.path())))
+  unlink(
+  paste(dirname(this.path::this.path()), xfile, sep = "/"),
+  recursive = T, force = T
+  )
+}
+unlink_html_files()

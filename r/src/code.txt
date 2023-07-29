@@ -1,0 +1,8 @@
+kbl.format <- function(data, caption = "", align = "r", font = "Cambria") {
+  library(magrittr)
+  data %>%   
+    kableExtra::kbl(caption = caption, align = align) %>%
+    kableExtra::kable_classic(full_width = F, html_font = font)
+} 
+kbl_it <- kbl.format
+

@@ -1,0 +1,1959 @@
+---
+title: "Estimating Recidivism Risk <br> from Data Visualizations: <br>Accurate or Illusory?"
+author: "<br>Gabriel I. Cook^1^, Daniel A. Krauss^1^, & Lukas Klapatch^2^<br>*Claremont McKenna College^1^; Hill Holliday^2^*"
+
+#format: revealjs
+#  incremental: true 
+
+# https://rstudio-conf-2022.github.io/get-started-quarto/materials/05-presentations.html#/slide-numbering
+format: 
+  revealjs:
+    #slide-number: c/t
+    width: 1600
+    height: 900
+    logo: "https://www.cmc.edu/themes/custom/cmc/images/logo.svg" 
+    #logo: "https://www.hhcc.com/img/logos/hh-logo.svg"
+    footer: "[]()"
+    #css: ["theme/theme.css"]
+    theme: simple
+    incremental: true
+    echo: true
+    
+  #https://stackoverflow.com/questions/74180779/r-quarto-html-document-how-to-insert-logo-image-at-the-left-of-the-title-su
+---
+
+
+```{r libraries-and-funcs}
+#| echo: false
+#| warning: false
+#| message: false
+
+## Libraries
+library(dplyr)
+library(magrittr)
+library(ggplot2)
+#library(see)
+library(colorblindr)
+#library(here)
+#library(magick)
+
+################################################################################
+#source(here::here("r", "src",  "libraries.R"))
+source(here::here("r", "src",  "functions.txt"))  ## this one loads a ton of packages fyi, clean ups
+#source(here::here("r", "src",  "true_count.R"))
+source(here::here("r", "src",  "mode.R"))
+#source(here::here("r", "src",  "count_to_prop.R"))
+source(here::here("r", "src",  "kbl_it_table.R"))
+#source(here::here("r", "src",  "glm_modPlot.R"))
+#source(here::here("r", "src",  "data_summary.R"))
+
+source("C:/Users/gcook/Sync/Progs/R/R-Portable/mypackages/zaatar Scripts/scale_recode.R")
+source("C:/Users/gcook/Sync/Progs/R/R-Portable/mypackages/zaatar Scripts/remove_geom.R")
+
+#rm(list = ls(all.names = TRUE))      # remove objects in R
+proj_dir  <- here::here()
+proj_name <- basename(here::here())
+r_dir     <- here::here("r") 
+data_dir  <- here::here("data") 
+
+data_file <- 'wai_juror_exp1.csv'
+data_num  <- 'wai_juror_numeric.csv'
+
+# Blais Estimate Data
+bar_color = "lightgrey"
+source(here::here("r", "src", "blais.R"))
+
+```
+
+```{r estimated-weighted-plots}
+#| echo: false
+DAT <- read.csv(paste(data_dir, data_file, sep = "/"))
+
+# clean up, exclude folks
+DAT <- DAT %>%
+  dplyr::filter(., CrimeAcc == 1) %>%   # correct crime
+  dplyr::filter(., RiskEntry == 9) %>%
+  dplyr::filter(., !is.na(JuryJudge)) %>%
+  select(., id, PlotType, Risk, RiskCheck, RiskEntry, CrimeAcc, Plot,
+           Score_Risk, AvgScore_Risk, JuryJudge, 
+           Score_Risk_Est_Diff, AvgScore_Risk_Est_Diff,
+           Score_Risk_Est_Diff_Exp,
+           MinNumEst:MinNumEst_3,
+           RiskNumEst_1:RiskNumEst_5
+           )
+
+DAT <- DAT %>%
+  # all sores
+  mutate(., AvgScore_OverEst = case_when(
+    AvgScore_Risk > BLAIS_2y_mean ~ 1,
+    AvgScore_Risk == BLAIS_2y_mean ~ 0,
+    AvgScore_Risk < BLAIS_2y_mean ~ 0,
+  )) %>%
+  # brent score   
+  mutate(., Score_OverEst = case_when(
+    Score_Risk > BRENT_Score2_mean ~ 1,
+    Score_Risk == BRENT_Score2_mean ~ 0,
+    Score_Risk < BRENT_Score2_mean ~ 0,
+  ))
+
+
+#Mode(DAT$RiskEntry)
+DAT$AvgScore_Risk <- DAT$AvgScore_Risk/100
+DAT$Score_Risk    <- DAT$Score_Risk/100
+DAT$MinNumEst     <- DAT$MinNumEst/100
+
+weighted_riskest <- DAT %>%
+  filter(., Plot == "Weighted") %>%
+  select(., AvgScore_Risk, Score_Risk)
+
+#head(weighted_riskest)
+#mean(weighted_riskest$AvgScore_Risk)
+#median(weighted_riskest$AvgScore_Risk)
+
+weighted_riskest_t <- t.test(
+  weighted_riskest$AvgScore_Risk, 
+  mu = BLAIS_2y_mean, 
+  alternative = "two.sided",
+  conf.level = .99
+  )
+
+t_mean <- weighted_riskest_t$estimate
+t_conf <- c(
+  min(weighted_riskest_t$conf.int), 
+  max(weighted_riskest_t$conf.int)
+)
+
+weighted_scoreest_t <- t.test(
+  DAT[DAT$Plot == "Weighted", "Score_Risk"], 
+  mu = 9, 
+  alternative = "two.sided",
+  conf.level = .99
+  )
+
+t_mean_score <- weighted_scoreest_t$estimate
+t_conf_score <- c(
+  min(weighted_scoreest_t$conf.int), 
+  max(weighted_scoreest_t$conf.int)
+)
+
+
+weighted_riskest_sign <- EnvStats::signTest(
+  weighted_riskest$AvgScore_Risk, 
+  y = NULL, 
+  alternative = "two.sided", 
+  mu = BLAIS_2y_mean, 
+  paired = FALSE, 
+  conf.level = 0.99
+  )
+
+sign_med <- weighted_riskest_sign$estimate
+sign_conf <- c(
+  min(weighted_riskest_sign$interval$limits),
+  max(weighted_riskest_sign$interval$limits)
+)
+
+AVGScore_by_group <- DAT %>%
+#  dplyr::filter(., CrimeAcc == 1) %>%   # correct crime
+#  dplyr::filter(., RiskEntry == 9) %>%
+#  dplyr::filter(., !is.na(JuryJudge)) %>% 
+  dplyr::mutate(., id = seq(1, length(id))) %>%
+  means1(., AvgScore_Risk ~ Plot) %>%
+  dplyr::select(., Plot, n, AvgScore_Risk, 
+                mdn, min, max, skew, se)
+
+
+AVGScore_by_group <- AVGScore_by_group[, c("Plot", "n", "mdn")]
+names(AVGScore_by_group)[3] = "AvgScore_Risk"
+
+Score_by_group <- DAT %>%
+#  dplyr::filter(., CrimeAcc == 1) %>%   # correct crime
+#  dplyr::filter(., RiskEntry == 9) %>%
+#  dplyr::filter(., !is.na(JuryJudge)) %>% 
+  dplyr::mutate(., id = seq(1, length(id))) %>%
+  means1(., Score_Risk ~ Plot) %>%
+  dplyr::select(., Plot, n, Score_Risk, mdn, min, max, skew)
+
+Score_by_group <- Score_by_group[, c("Plot", "n", "mdn")]
+names(Score_by_group)[3] = "Score_Risk"
+
+avgest_summary <- DAT %>% filter(., Plot != "None") %>%
+  group_by(., Plot) %>%
+  summarise(., 
+            mean  = mean(AvgScore_Risk, na.rm = TRUE),
+            med  = median(AvgScore_Risk, na.rm = TRUE),
+            sd   = sd(AvgScore_Risk, na.rm = TRUE),
+            sem  = sd(AvgScore_Risk, na.rm = TRUE)/sqrt(dplyr::n()),
+            n = dplyr::n()
+            )
+
+unweighted_mean_avg <- as.numeric(avgest_summary[1,2])
+weighted_mean_avg   <- as.numeric(avgest_summary[2,2])
+
+# bootstrap the median
+meanfun   <- function(x, id) { mean(x[id]) }
+#medianfun <- function(x, id) { median(x[id]) }
+boot_mean <- boot::boot(
+  data = DAT[DAT$Plot == "Weighted", "AvgScore_Risk"],
+  R = 5000, statistic = meanfun
+  )
+
+#BCa using boot.ci
+boot_bca <- boot::boot.ci(boot_mean, type = "bca")
+boot_conf <- boot_bca$bca[4:5]
+
+scoreest_summary <- DAT %>% filter(., Plot != "None") %>%
+#  dplyr::mutate(., Score_Risk = Score_Risk/100) %>%
+  group_by(., Plot) %>%
+  summarise(., 
+            mean  = mean(Score_Risk, na.rm = TRUE),
+            med  = median(Score_Risk, na.rm = TRUE),
+            sd   = sd(Score_Risk, na.rm = TRUE),
+            sem  = sd(Score_Risk, na.rm = TRUE)/sqrt(dplyr::n()),
+            n = dplyr::n()
+            )
+
+unweighted_mean_score <- as.numeric(scoreest_summary[1,2])
+weighted_mean_score   <- as.numeric(scoreest_summary[2,2])
+
+estimated_unweighted <- list(base = NULL, 
+                           line = NULL,
+                           ci = NULL
+                           )
+estimated_unweighted$base <- Blais.p.unweighted +
+  geom_hline(yintercept = mean(BLAIS_2y_obs$rate, na.rm = T)/100, 
+             linetype = "dashed", col = "black")
+#estimated_unweighted$base
+
+estimated_unweighted$line <- estimated_unweighted$base +
+  geom_hline(yintercept = as.numeric(unweighted_mean_avg), col = "blue", linewidth = 1) 
+#estimated_unweighted$line
+
+estimated_weighted <- list(base = NULL, 
+                           line = NULL,
+                           ci = NULL
+                           )
+
+estimated_weighted$base <- Blais.p.weighted +
+  geom_hline(yintercept = mean(BLAIS_2y_obs$rate, na.rm = T)/100, 
+             linetype = "dashed", col = "black")
+#estimated_weighted$base
+
+estimated_weighted$line <- estimated_weighted$base +
+  geom_hline(yintercept = as.numeric(weighted_mean_avg), col = "blue", linewidth = 1) 
+#estimated_weighted$line
+
+estimated_weighted$ci <- estimated_weighted$line +
+  geom_rect(xmin = -3, xmax = 8, 
+            ymin = t_conf[1], ymax = t_conf[2], 
+            fill = "#9999ff", alpha = .01) +
+  geom_label(label = "99% CI", x = 1, y = .295, size = 5) 
+#estimated_weighted$ci
+#
+
+
+```
+
+
+```{r blais-and-brent-data}
+#| echo: false
+# get the plot data
+####################################################################################
+# Mr. Brent
+####################################################################################
+BRENT <- read.csv(here::here("data", paste0("BRENT_2y_score2_seed - 99.csv")))
+#BRENT %>% group_by(., score) %>% summarise(mean(rate))
+BRENT_2 <- BRENT %>% filter(score %in% c(2))
+#BRENT_2 %>% summarise(mean(rate)) 
+
+
+Brent_2_default <- BRENT_2 %>%
+  ggplot(data = ., aes(x = score, y = rate)) +
+  #geom_line(size = .25) + 
+  geom_point(size = 2, 
+             alpha = .5, 
+             position = position_jitter(seed = 99, width = 1)) +
+  #geom_point(aes(size = rate), alpha = .5, position = position_jitter(seed = 42, width = 1)) +
+  theme_classic() + #minimal() + 
+  theme(axis.line = 
+          element_line(colour = "black", 
+                       size = 1, linetype = "solid"),
+        axis.title = element_text(size = 14, face = "bold"), 
+        axis.text  = element_text(size = 14),
+        strip.text.y = element_text(size = 12),
+        aspect.ratio = 1/1,
+        legend.position = "none"
+        ) +
+    scale_x_discrete(
+      name   = "Score = 2" #, limits = 2
+    ) +
+    scale_y_continuous(
+      # position = "right",
+      name = "Predicted Recidivism Rate (%)", 
+      limits = c(1, 20),    #  n.breaks = 50
+      breaks = seq(1, 20, 1)
+    ) +
+  ggtitle(""); #Brent_2_default
+
+
+Brent_2_size <- BRENT_2 %>%
+  ggplot(data = ., aes(x = score, y = rate)) +
+  #geom_line(size = .25) + 
+  geom_point(aes(size = rate),
+             #size = 2, 
+             alpha = .5, 
+             position = position_jitter(seed = 99, width = 1)) +
+  #geom_point(aes(size = rate), alpha = .5, position = position_jitter(seed = 42, width = 1)) +
+  theme_classic() + #minimal() + 
+  theme(axis.line = 
+          element_line(colour = "black", 
+                       size = 1, linetype = "solid"),
+        axis.title = element_text(size = 14, face = "bold"), 
+        axis.text  = element_text(size = 14),
+        strip.text.y = element_text(size = 12),
+        aspect.ratio = 1/1,
+        legend.position = "none"
+        ) +
+    scale_x_discrete(
+      name   = "Score = 2" #, limits = 2
+    ) +
+    scale_y_continuous(
+      # position = "right",
+      name = "Predicted Recidivism Rate (%)", 
+      limits = c(1, 20),    #  n.breaks = 50
+      breaks = seq(1, 20, 1)
+    ) +
+  ggtitle("")
+
+estimated_score_unweighted <- list(base = NULL, 
+                           line = NULL,
+                           ci = NULL
+                           )
+estimated_score_weighted <- list(base = NULL, 
+                           line = NULL,
+                           ci = NULL
+                           )
+estimated_score_unweighted$base <- Brent_2_default +
+  geom_hline(yintercept = 9, 
+             linetype = "dashed", col = "black")
+
+estimated_score_unweighted$line <- estimated_score_unweighted$base +
+  geom_hline(yintercept = as.numeric(unweighted_mean_score)*100, col = "blue", linewidth = 1)
+
+estimated_score_weighted$base <- Brent_2_size +
+  geom_hline(yintercept = 9, 
+             linetype = "dashed", col = "black")
+
+estimated_score_weighted$line <- estimated_score_weighted$base +
+  geom_hline(yintercept = as.numeric(weighted_mean_score)*100, col = "blue", linewidth = 1)
+#estimated_score_weighted$line
+
+estimated_score_weighted$ci <- estimated_score_weighted$line +
+  geom_rect(xmin = -3, xmax = 8, 
+            ymin = t_conf_score[1]*100, 
+            ymax = t_conf_score[2]*100, 
+            fill = "#9999ff", alpha = .01) +
+  geom_label(label = "99% CI", x = 1, y = 17, size = 5) 
+#estimated_score_weighted$ci
+
+
+
+####################################################################################
+# Then all Scores
+####################################################################################
+BLAIS_2y_obs <- read.csv(here::here("data", paste0("BLAIS_2y_obs_seed - 99.csv")))
+#BLAIS_2y_obs <- read.csv("BLAIS_2y_obs.csv")
+BLAIS_2y_obs$rate_z <- as.numeric(scale(BLAIS_2y_obs$rate))
+
+# remove the NAs in score 8
+BLAIS_2y_obs <- BLAIS_2y_obs %>% dplyr::filter(score < 8)
+
+# Mr. Brent
+#BLAIS_2y_obs %>% 
+#  mutate(., cnt = 1) %>%
+#  mutate(., total = sum(cnt)) %>%
+#  group_by(., score) %>% 
+#  summarise(prob = sum(cnt)/mean(total))
+
+
+Blais_default <- ggplot(data = BLAIS_2y_obs, 
+                  mapping = aes(x = score, y = rate
+                                , #alpha = rate
+                                )) +
+  # for wai1, size 2, width was .7; .3 for wai2, alpha = .5
+#  geom_point(size = 2, 
+#             alpha = .5, 
+#             position = position_jitter(seed = 68, width = .3)) +
+  geom_point(aes(
+    #size = rate,
+    #alpha = rev(rate_z)
+    ), 
+    alpha = .5, 
+    position = position_jitter(seed = 68, width = .3)) + 
+  #geom_line(size = .25) + 
+  theme_classic() + #minimal() + 
+  theme(axis.line = 
+          element_line(colour = "black", 
+                       size = 1, linetype = "solid"),
+        axis.title = element_text(size = 14, face = "bold"), 
+        axis.text  = element_text(size = 14),
+        strip.text.y = element_text(size = 12),
+        aspect.ratio = 1/1,
+        legend.position = "none"
+        ) +
+    scale_x_discrete(
+      name   = "Scores", limits = seq(-2, 7)
+    ) +
+    scale_y_continuous(
+      # position = "right",
+      name = "Predicted Recidivism Rate (%)", 
+      limits = c(0, 75),    #  n.breaks = 50
+      breaks = seq(0, 75, 5)
+    )
+  
+Blais_size <- ggplot(
+  data = BLAIS_2y_obs, 
+  mapping = aes(x = score, y = rate
+                                , #alpha = rate
+                                )) +
+  # for wai1, size 2, width was .7; .3 for wai2, alpha = .5
+#  geom_point(size = 2, 
+#             alpha = .5, 
+#             position = position_jitter(seed = 68, width = .3)) +
+  geom_point(aes(
+    size = rate,
+    #alpha = rev(rate_z)
+    ), 
+    alpha = .5, 
+    position = position_jitter(seed = 68, width = .3)) + 
+  #geom_line(size = .25) + 
+  theme_classic() + #minimal() + 
+  theme(axis.line = 
+          element_line(colour = "black", 
+                       size = 1, linetype = "solid"),
+        axis.title = element_text(size = 14, face = "bold"), 
+        axis.text  = element_text(size = 14),
+        strip.text.y = element_text(size = 12),
+        aspect.ratio = 1/1,
+        legend.position = "none"
+        ) +
+    scale_x_discrete(
+      name   = "Scores", limits = seq(-2, 7)
+    ) +
+    scale_y_continuous(
+      # position = "right",
+      name = "Predicted Recidivism Rate (%)", 
+      limits = c(0, 75),    #  n.breaks = 50
+      breaks = seq(0, 75, 5)
+    )
+
+#Blais_size
+
+blais_dat_table <- data.frame(
+  Score = as.numeric(c("-2", "-1", "0", "1", "2", "3", "4", "5", "6", "7", "8", "")),
+  Cases = as.numeric(c("82", "17", "179", "179", "251", "156", "174", "153", "150", "111", "6", "1458")),
+
+  Recidivate = as.numeric(c("1", "0", "6", "10", "27", "15", "33", "39", "54", "59", "3", "247")),
+  
+  Counts = c("1/82", "0/17", "6/179", "10/179", "27/251", "15/156",
+             "33/174", "39/153", "54/150", "59/111", "3/6", "247/1458"),
+  Observed = as.numeric(c("1.2", "0.0", "3.4", "5.6", "10.8", "9.6",
+                          "19.0", "25.5", "36.0", "53.2", "50.0", "19.5")),
+  Predicted = as.numeric(c("1.3", "2.2", "3.5", "5.7", "9.0", "14.0",
+                           "21.2", "30.6", "42.0", "54.4", "0", ""))/100
+) %>%
+  dplyr::mutate(., Fraction = paste0(Recidivate, "/", Cases))
+
+blais_dat <- blais_dat_table[1:11,]
+base_col = "lightgrey"
+highlight_col = "blue"
+
+```
+
+
+
+
+```{r data}
+#| echo: false
+
+# BLAIS_2y_mean,
+# BLAIS_2y_mean = 9
+
+# BRENT_Score2_mean,
+# BRENT_Score2_mean = 9
+# end 
+
+#png::writePNG(image = , target = , dpi = , )
+gg_png <- function(
+  dir = NULL, 
+  plot = NULL, ...
+  ) {
+  ggsave(
+    filename = paste0(dir, "/", deparse(substitute(plot)), ".png"),   
+    plot = plot, 
+    device = "png", 
+    width = 5, height = 5,
+    units = "in", dpi = 320
+    )
+}
+
+theme_mod <- function() {
+  see::theme_modern(base_size = 14, 
+                    axis.title.size = 16,
+                    axis.text.size = 15,
+                    plot.title.size = 15
+                    )
+}
+
+
+
+NC <- read.csv(paste(data_dir, data_num, sep = "/"), skip = 0) %>% 
+  filter(., Status == 0) %>% 
+  filter(., !is.na(id)) %>%
+  filter(., id != "") %>%
+  select(., c(id, starts_with("NC_"))) 
+
+# recode values
+NC <- scale_recode(NC, 
+             values_from = c( 1,  2,  3,  4, 5, 6, 7, 8, 9), 
+             values_to   = c(-4, -3, -2, -1, 0, 1, 2, 3, 4) 
+            )
+
+# then reverse these
+NC <- scale_recode(NC, 
+             cols = c("NC_3", "NC_4", "NC_5", "NC_7", "NC_8", "NC_9", "NC_12", "NC_16", "NC_17"),
+             reverse = T
+             )
+
+
+#DAT %>% view()  
+
+Score_OverEst <- DAT %>%
+  #select(., PlotType, AvgScore_Risk, AvgScore_OverEst, Sc) %>%
+  group_by(., PlotType) %>%
+  summarize(., 
+            Score_Est_mean   = mean(Score_Risk, na.rm = T),
+            Score_Est_median = median(Score_Risk, na.rm = T),
+            Score_OverEst    = sum(Score_OverEst, na.rm = T)/length(na.omit(Score_OverEst)),
+            
+            AvgScore_Est_mean   = mean(AvgScore_Risk, na.rm = T),
+            AvgScore_Est_median = median(AvgScore_Risk, na.rm = T),
+            AvgScore_OverEst    = sum(AvgScore_OverEst, na.rm = T)/length(na.omit(AvgScore_OverEst)),
+  )
+
+
+NC = merge(NC, DAT) %>%
+  dplyr::filter(., CrimeAcc == 1) %>%   # correct crime
+  dplyr::filter(., RiskEntry == 9) %>%  # correct risk reported
+  dplyr::filter(., !is.na(JuryJudge))
+  
+
+NC <- NC %>%
+  filter(., !is.na(NC_1)) %>% 
+  mutate(.,
+         NFC = rowMeans(select(., starts_with("NC_")), na.rm = TRUE),
+         NFC_n = ntile(NFC, 2)
+         )
+
+
+```
+
+
+```{r estimation-plots}
+#| echo: false
+# AvgScore_Risk, Score_Risk
+plot_seed = 100
+
+base_avgest_plot <- DAT %>% filter(., Plot != "None") %>%
+  ggplot(data = ., aes(x = Plot, y = AvgScore_Risk), seed = plot_seed) +
+  geom_point(position = position_jitter(seed = plot_seed, 
+                                        width = .2),
+             alpha  = .8) +
+  scale_y_continuous(limits = c(.01, 1), n.breaks = 20, labels = scales::label_percent()) +
+  labs(title = "", x = "Plot Condition", y = "All Scores",
+       subtitle = "") +
+  #theme_ben() #+ 
+  theme_mod()
+
+avgest_plot <- base_avgest_plot +
+  geom_point(data = DAT %>% filter(., Plot != "None") %>% 
+               group_by(., Plot) %>% summarise(., AvgScore_Risk = median(AvgScore_Risk, na.rm = TRUE)),
+             col = "blue", size = 5, alpha = .5) +
+  geom_point(data = DAT %>% filter(., Plot != "None") %>% 
+               group_by(., Plot) %>% summarise(., AvgScore_Risk = mean(AvgScore_Risk, na.rm = TRUE)),
+             col = "red", size = 5, alpha = .5) +
+  geom_text(hjust = 0, size = 7, x = 1, y = .95, label = paste0("Mean Difference = ", round(
+    100*abs(avgest_summary[1,"mean"] - avgest_summary[2,"mean"]),1), "%")) +
+  geom_text(hjust = 0, size = 7, x = 1, y = .9, label = paste0("Median Difference = ", round(
+    100*abs(avgest_summary[1,"med"] - avgest_summary[2,"med"]),1), "%"))
+
+
+base_avgest_bar <- avgest_summary %>% 
+  ggplot(data = ., aes(x = Plot, y = mean, label = paste0(round(mean*100, 1), "%"))) +
+  geom_bar(stat = "identity", fill = "grey75") +
+#  scale_y_continuous(labels = scales::label_percent(), n.breaks = 10)
+  scale_y_continuous(limits = c(0, .5), n.breaks = 10, labels = scales::label_percent()) +
+  labs(title = "", 
+       x = "Plot Condition", 
+       y = "All Scores",
+       subtitle = "") +
+  geom_label(nudge_y = .02) +# label = commit_summary$Commit) +
+#  geom_text(
+#    aes(label = paste0(round(med*100, 2), "%")), 
+#    nudge_y = .5
+#    ) +
+  theme_mod()
+
+base_avgest_bar_tconf <- base_avgest_bar +
+#  geom_bar(stat = "identity", col = "white") +
+  geom_point(mapping = aes(x = 2.3, y = t_mean),
+             alpha = .4, col = "blue", stroke = 3) +
+  geom_errorbar(
+    mapping = aes(x = 2.3),
+    ymin = t_conf[1], ymax = t_conf[2], 
+    width = .10, color = "blue"
+  )
+
+base_avgest_bar_signconf <- base_avgest_bar + 
+  geom_point(mapping = aes(x = 2.3, y = sign_med), 
+             alpha = .4, col = "red", stroke = 3) +
+  geom_errorbar(
+    mapping = aes(x = 2.3),
+    ymin = sign_conf[1], ymax = sign_conf[2], 
+    width = .10, color = "red"
+  ) 
+    
+
+#geom_point(position = position_jitter(seed = plot_seed, 
+ #                                       width = .2),
+#             alpha  = .8) +
+
+
+v <- DAT %>% filter(., Plot != "None") %>%
+  ggplot(data = ., aes(x = Plot, y = AvgScore_Risk), seed = plot_seed) +
+  #geom_violin(alpha = .5) +
+  #geom_violin(col = "gray50", fill = "gray50", alpha = .1) + 
+  gghalves::geom_half_violin(side = "r", col = "gray50", fill = "gray50", alpha = .1, trim = F) +
+#  geom_jitter(height = 0, width = 0.1, alpha = .5) +
+  #scolorblindr::scale_OkabeIto() + #scale_color_OkabeIto() +
+  #theme(legend.position="none")
+  scale_y_continuous(limits = c(.01, 1), n.breaks = 20, labels = scales::label_percent()) +
+  labs(title = "", x = "Plot Condition", y = "All Scores",
+       subtitle = "") +
+  #theme_ben() #+ 
+  theme_mod()
+
+
+p <- ggplot(#data = weighted_riskest, 
+       mapping = aes(x = 2, 
+                     y = mean(weighted_riskest$AvgScore_Risk)
+                     )
+       ) +
+#  geom_point(alpha = .4, col = "blue", stroke = 3) + #x = 2, y = .25, size = 5) +
+  scale_x_continuous(limits = c(1, 3)) +
+  scale_y_continuous(limits = c(.10, .40)) +
+  geom_errorbar(ymin = t_conf[1], ymax = t_conf[2],
+  width = .10, color = "blue"
+  ) + 
+  theme_mod()
+
+
+px <- p + 
+  geom_point(aes(x = 2, y = sign_med)) +
+  geom_errorbar(ymin = sign_conf[1], 
+                ymax = sign_conf[2],
+  width = .10, color = "red"
+  )
+
+unweighted_mean_score2 <- scoreest_summary[1,2]
+weighted_mean_score2   <- scoreest_summary[2,2]
+
+base_scoreest_bar <- scoreest_summary %>% 
+  ggplot(data = ., aes(x = Plot, y = mean, label = paste0(round(mean*100, 1), "%"))) +
+  geom_bar(stat = "identity", fill = "grey75") +
+#  scale_y_continuous(labels = scales::label_percent(), n.breaks = 10)
+  scale_y_continuous(limits = c(0, .5), n.breaks = 10, labels = scales::label_percent()) +
+  labs(title = "", 
+       x = "Plot Condition", 
+       y = "Defendant's Score",
+       subtitle = "") +
+  geom_label(nudge_y = .02) +# label = commit_summary$Commit) +
+  theme_mod()
+
+
+base_scoreest_plot <- DAT %>% filter(., Plot != "None") %>%
+  ggplot(data = ., aes(x = Plot, y = Score_Risk), seed = plot_seed) +
+  geom_point(position = position_jitter(seed = plot_seed, 
+                                        width = .2),
+             alpha  = .8) +
+  scale_y_continuous(limits = c(.01, 1), n.breaks = 20, labels = scales::label_percent()) +
+  labs(title = "", 
+       x = "Plot Condition", 
+       y = "Defendant's Score",
+       subtitle = "") +
+  #theme_ben() +
+  theme_mod()
+
+
+scoreest_plot <- base_scoreest_plot +
+  geom_point(data = DAT %>% filter(., Plot != "None") %>% 
+               group_by(., Plot) %>% summarise(., Score_Risk = median(Score_Risk, na.rm = TRUE)),
+             col = "blue", size = 5, alpha = .5) +
+  geom_point(data = DAT %>% filter(., Plot != "None") %>% 
+               group_by(., Plot) %>% summarise(., Score_Risk = mean(Score_Risk, na.rm = TRUE)),
+             col = "red", size = 5, alpha = .5) +
+  geom_text(hjust = 0, size = 7, x = 1, y = .95, label = paste0("Mean Difference = ", round(
+    100*abs(scoreest_summary[1,"mean"] - scoreest_summary[2,"mean"]),1), "%")) +
+  geom_text(hjust = 0, size = 7, x = 1, y = .9, label = paste0("Median Difference = ", round(
+    100*abs(scoreest_summary[1,"med"] - scoreest_summary[2,"med"]),1), "%"))
+
+#gg_png(dir = here::here("images"), plot = base_avgest_plot)
+#gg_png(dir = here::here("images"), plot = avgest_plot)
+
+#gg_png(dir = here::here("images"), plot = base_scoreest_plot)
+#gg_png(dir = here::here("images"), plot = scoreest_plot)
+
+commit_summary <- DAT %>%
+  group_by(., Plot) %>%
+  summarise(., 
+            Commit = mean(JuryJudge, na.rm = TRUE),
+            Commit_sd  = sd(JuryJudge, na.rm = TRUE),
+            Commit_sem  = sd(JuryJudge, na.rm = TRUE)/sqrt(dplyr::n()),
+            n = dplyr::n()
+            )
+  
+```
+
+
+```{r blais-bar-plots}
+#| echo: false
+blais_dat_bar <- blais_dat %>%
+  ggplot(data = ., seed = plot_seed,
+         mapping = aes(x = Score, 
+                       y = Predicted
+                       )
+         ) +
+  #geom_col() +
+  geom_bar(stat = "identity", fill = c(rep(base_col, 11))) +
+  scale_x_continuous(breaks = blais_dat$Score) +
+  scale_y_continuous(label = scales::label_percent(), 
+                     limits = c(0, .70), n.breaks = 20) +
+  labs(x = "Assessment Score", y = "Estimated 2 Year Recidivism Rates (%)") + 
+  see::theme_modern()
+
+
+B <- BLAIS_2y_obs %>%
+  select(., score, rate) %>%
+  mutate(., Predicted = rate/100, 
+            Score = score)
+
+# then make the stimulus slide image
+#library(gganimate)
+
+point_width = .25
+blais_dat_bar2 <- geom_bar_remove(blais_dat_bar) + 
+  geom_bar(data = blais_dat, stat = "identity", 
+           aes(x = Score, y = Predicted), fill = "lightgrey")
+
+b <- blais_dat_bar2 +  
+  geom_point(data = B %>% filter(., Score <= -2),
+             position = position_jitter(seed = 68,  width = point_width),
+             mapping = aes(x = Score, y = Predicted), alpha = .6)
+
+b0 <- b + geom_point(data = B %>% filter(., Score <= -1),
+             position = position_jitter(seed = 68,  width = point_width),
+             mapping = aes(x = Score, y = Predicted), alpha = .6)
+
+b1 <- b + geom_point(data = B %>% filter(., Score <= 0),
+             position = position_jitter(seed = 68,  width = point_width),
+             mapping = aes(x = Score, y = Predicted), alpha = .6)
+
+b2 <- b + geom_point(data = B %>% filter(., Score <= 1),
+             position = position_jitter(seed = 68,  width = point_width),
+             mapping = aes(x = Score, y = Predicted), alpha = .6)
+
+b3 <- b + geom_point(data = B %>% filter(., Score <= 2),
+             position = position_jitter(seed = 68,  width = point_width),
+             mapping = aes(x = Score, y = Predicted), alpha = .6)
+
+b4 <- b + geom_point(data = B %>% filter(., Score <= 3),
+             position = position_jitter(seed = 68,  width = point_width),
+             mapping = aes(x = Score, y = Predicted), alpha = .6)
+
+b5 <- b + geom_point(data = B %>% filter(., Score <= 4),
+             position = position_jitter(seed = 68,  width = point_width),
+             mapping = aes(x = Score, y = Predicted), alpha = .6)
+
+b6 <- b + geom_point(data = B %>% filter(., Score <= 5),
+             position = position_jitter(seed = 68,  width = point_width),
+             mapping = aes(x = Score, y = Predicted), alpha = .6)
+
+b7 <- b + geom_point(data = B %>% filter(., Score <= 6),
+             position = position_jitter(seed = 68,  width = point_width),
+             mapping = aes(x = Score, y = Predicted), alpha = .6)
+
+b8 <- b + geom_point(data = B %>% filter(., Score <= 7),
+             position = position_jitter(seed = 68,  width = point_width),
+             mapping = aes(x = Score, y = Predicted), alpha = .6)
+
+# add an empty plot so slace doesn't shift
+b9 <- b8 + geom_point(data = data.frame(Score = 8, Predicted = .1), 
+                      fill = "white", col = "white",
+             position = position_jitter(seed = 68,  width = point_width),
+             mapping = aes(x = Score, y = Predicted), alpha = .6)
+
+b10 <- geom_bar_remove(blais_dat_bar) + 
+  geom_bar(data = blais_dat, stat = "identity", 
+           aes(x = Score, y = Predicted), fill = "white", col = "white") +
+  geom_point(data = B %>% filter(., Score <= 7),
+             position = position_jitter(seed = 68,  width = point_width),
+             mapping = aes(x = Score, y = Predicted), alpha = .6) +
+  geom_point(data = data.frame(Score = 8, Predicted = .1), 
+                      fill = "white", col = "white",
+             position = position_jitter(seed = 68,  width = point_width),
+             mapping = aes(x = Score, y = Predicted), alpha = .6)
+
+
+
+#geom_bar_remove(blais_dat_bar) + geom_bar(data = blais_dat, stat = "identity", 
+#                                          aes(x = Score, y = Predicted), fill = "yellow", col = "white")
+
+#b10 <-  geom_bar_remove(b9) #remove_geom(b9, "GeomBar")
+
+#plots = c(b, b0, b1, b2, b3, b4, b5, b6, b7, b8, b9, b10) 
+
+#here::here("figs", "blais_02.png")
+gg_png(dir = here::here("figs"), plot = b)
+gg_png(dir = here::here("figs"), plot = b0)
+gg_png(dir = here::here("figs"), plot = b1)
+gg_png(dir = here::here("figs"), plot = b2)
+gg_png(dir = here::here("figs"), plot = b3)         
+gg_png(dir = here::here("figs"), plot = b4)
+gg_png(dir = here::here("figs"), plot = b5)
+gg_png(dir = here::here("figs"), plot = b6)
+gg_png(dir = here::here("figs"), plot = b7)
+gg_png(dir = here::here("figs"), plot = b8)
+gg_png(dir = here::here("figs"), plot = b9)
+gg_png(dir = here::here("figs"), plot = b10)
+
+png_files <- list.files(here::here("figs"), 
+                        pattern = "b.*png$",
+                        full.names = TRUE
+                        )[c(1:12)]
+
+png_files <- c(png_files[c(1:3,5:12)], rep(png_files[4], 20))
+
+#gifski::gifski(png_files, 
+#               gif_file = "figs\blais_stim_generation.gif", 
+#               width = 800, height = 600, delay = .5)
+
+#list.files(path = here::here("figs"), 
+#           pattern = 'b*.png$', full.names = TRUE
+#           )[1:11] 
+if (!file.exists(here::here("figs", "blais_data_points_animated.gif"))) {
+png_files %>% 
+        magick::image_read() %>% # reads each path file
+        magick::image_join() %>% # joins image
+        magick::image_animate(fps = 1) %>% # animates, can opt for number of loops
+        magick::image_write(here::here("figs", "blais_data_points_animated.gif")) # write to current dir
+}
+#blais_dat_bar
+
+```
+
+
+
+```{r blais-bar-plots2}
+#| echo: false
+blais_dat_bar_label <- blais_dat_bar +
+  geom_text(mapping = aes(label = paste0(100*Predicted, "%")), nudge_y = 0.015) 
+
+blais_dat_bar_cases <- blais_dat_bar_label +
+  #  scale_color_manual() +
+  #geom_label(mapping = aes(label = counts), y = -1.5) +
+  geom_label(mapping = aes(label = Cases), 
+             y = -2/100, col = "white", fill = "black") #+ annotate("text", label = "Cases = ", x = 0, y = -1.2)
+
+```
+
+
+```{r blais-blue}
+#| echo: false
+# changes to geom_col (fix with geom_gar)
+#highlight_col = "blue"
+blais_dat_bar_blue <- blais_dat_bar_cases + 
+  geom_col(fill = c(rep(base_col, 4), highlight_col, rep(base_col, 11 - 4 - 1)))
+
+```
+
+
+
+
+```{r}
+#| echo: false
+#blais_dat_bar + 
+#  geom_hline(yintercept = mean(blais_dat$Predicted), linetype = 'dashed', col = 'black')
+
+#  annotate("text", #"label", 
+#           label = paste0("", (blais_dat$Predicted), "%"), 
+#           label = "paste(italic(italicized))", parse = TRUE,
+#           x = 0, y = (blais_dat$Predicted) + .02, col = "black",
+#           size = 8) +
+#s  geom_hline(yintercept = mean(blais_dat$Predicted), linetype = 'dashed', col = 'black')
+
+```
+
+
+## **Perceptions of Recidivism Risk for <br>Sexually Violent Predators (SVP)**
+
+* Jurors tend to **overestimate** recidivism (Varela et al., 2014)
+* Laypeople believe rate is **75%**-**80%** (Levenson et al., 2007; Scott et al., 2010)
+* Meta‐analysis of **sexual recidivism** suggests closer to **11.5%** (follow-up: average 70 months) (Hanson & Morton‐Bourgon, 2009)
+
+---
+
+## **Recidivism Assessment Tools**
+
+* **STATIC-99R** ([Hanson & Thornton, 2000]())
+  + Validated risk-assessment instrument ([Hemus et al, 2012](https://onlinelibrary.wiley.com/doi/10.1002/bsl.2379#bsl2379-bib-0038); [Neal & Grisso, 2014](https://onlinelibrary.wiley.com/doi/10.1002/bsl.2379#bsl2379-bib-0021))
+  + 10 items, a total score from −3 to 12 (Helmus et al., 2012)
+
+* **BARR-2002R** ([Brief Assessment of Recidivism Risk-2002R (BARR-2002; Babchishin et al., 2016)]())
+  + sub-scale of STATIC-2002R (Helmus et al., 2012)
+  + scores range from -2 to 8
+  
+---
+
+## **Communicating Recidivism Risk <br>to Jurors SVP Proceedings**
+
+* 85% of mental health experts convey risk categorically (Storey, Watt, & Hart, 2015)
+
+* Risk-communication format influences decisions (Krauss, Cook, & Klapatch, 2018)
+  + *Categorical* (low, low-moderate, moderate-high, high) vs. 
+  + *Numerical* (13%, 21%, 30%, 43%)
+
+* Influenced decisions that defendant was **"beyond a reasonable doubt"** likely to <br>commit a future sexually violent offense
+
+---
+
+
+## **2-Year Estimated Recidivism Rates for BARR-2002R** <br> (Blais, Babchishin, & Hanson, 2021), *Adapted from Table 2S*
+
+---
+
+## **2-Year Estimated Recidivism Rates for BARR-2002R** <br> (Blais, Babchishin, & Hanson, 2021), *Adapted from Table 2S*
+
+```{r blais_dat_bar_label}
+#| echo: false
+#| fig-align: "center"
+blais_dat_bar_label
+```
+---
+
+## **2-Year Estimated Recidivism Rates for BARR-2002R** <br> (Blais, Babchishin, & Hanson, 2021), *Adapted from Table 2S*
+
+```{r blais_dat_bar_cases}
+#| echo: false
+#| fig-align: "center"
+blais_dat_bar_cases
+
+```
+---
+
+## **2-Year Estimated Recidivism Rates for BARR-2002R** <br> (Blais, Babchishin, & Hanson, 2021), *Adapted from Table 2S*
+
+```{r blais_dat_bar_blue}
+#| echo: false
+#| fig-align: "center"
+blais_dat_bar_blue
+
+```
+
+---
+
+
+# **Data Visualizations**
+
+* Facilitate data comprehension and storytelling
+* Inform decision making
+* Can be Used to communicate risk in SVP proceedings
+
+---
+
+
+## **Perceiving Data Visualizations**
+
+* Visualizations are visuals are pictures, viewed by the eye, and limited by visual system
+* Attention if **feature based**
+
+* Decorative elements can influence attention
+  + colors, color contrast 
+  + shape, size, hue, clusters of points, etc.
+  
+* May influence real-world decision making  
+
+
+
+```{r multiclass-plots}
+#| echo: false
+mtcars2 <- mtcars
+names(mtcars2) <- tools::toTitleCase(names(mtcars2))
+
+mtcars2$Cyl <- car::recode(mtcars2$Cyl, "4='A';6='B';8='C'")
+
+unweighted <- mtcars2 %>%
+  ggplot(data = ., seed = plot_seed, 
+         aes( x = Hp, y = Mpg),  alpha = .75) + 
+  geom_point(alpha = .75, size = 3, position = "jitter", col = "darkgrey") +
+  scale_x_continuous(limits = c(50, 350), n.breaks = 20) +
+  scale_y_continuous(limits = c(5, 40), n.breaks = 10) +
+  labs(x = "", y = "") +
+  theme_mod()
+
+weighted_size <- mtcars2 %>%
+  ggplot(data = ., seed = plot_seed, 
+         aes( x = Hp, y = Mpg)) +
+  geom_point(alpha = .75, position = "jitter", aes(size = as.factor(Cyl))) +
+  scale_x_continuous(limits = c(50, 350), n.breaks = 20) +
+  scale_y_continuous(limits = c(5, 40), n.breaks = 10) +
+  labs(x = "", y = "", 
+       size = "Group" # because mapped to size aes or   scale_size(range=c(2, 10), name = 'Legend Name') if element is size for example
+       ) +
+#  scale_size(name = 'Cylinders') +
+  theme_mod()
+
+# geom_point(size = 3, show.legend = FALSE) +
+
+unweighted_col <- mtcars2 %>%
+  ggplot(data = ., seed = plot_seed, 
+         aes( x = Hp, y = Mpg)) +
+  geom_point(alpha = .75, position = "jitter", 
+             size = 3,              aes(col = as.factor(Cyl))) +
+  scale_x_continuous(limits = c(50, 350), n.breaks = 20) +
+  scale_y_continuous(limits = c(5, 40), n.breaks = 10) +
+  labs(x = "", y = "", 
+       col = "Group" # because mapped to size aes
+       ) +
+#  scale_size(name = 'Cylinders') +
+  #scale_color_manual(values = c("red", "lightgrey", "#56B4E9")) +
+  colorblindr::scale_color_OkabeIto() +
+  theme_mod()
+
+weighted_col_size <- mtcars2 %>%
+  ggplot(data = ., seed = plot_seed, 
+         aes( x = Hp, y = Mpg)) +
+  geom_point(alpha = .75, position = "jitter", 
+             aes(size = as.factor(Cyl), col = as.factor(Cyl))
+             ) +
+  scale_x_continuous(limits = c(50, 350), n.breaks = 20) +
+  scale_y_continuous(limits = c(5, 40), n.breaks = 10) +
+  labs(x = "", y = "", 
+       size = "Group", # because mapped to size aes or   scale_size(range=c(2, 10), name = 'Legend Name') if element is size for example
+       col = "Group"
+       ) +
+  colorblindr::scale_color_OkabeIto() +  
+#  scale_color_manual(values = c("red", "lightgrey", "#56B4E9")) +
+#  scale_col(name = 'Cylinders') +
+  theme_mod()
+
+p <- cowplot::ggdraw() + 
+  cowplot::draw_image(here::here("images", "color-wheel.png")) # turn png into ggplot object
+
+color_blind_ex <- cowplot::plot_grid(p, # top left
+                   colorblindr::edit_colors(p, protan, sev = 0.9), # top right
+                   colorblindr::edit_colors(p, deutan, sev = 0.9), # bot left
+                   colorblindr::edit_colors(p, tritan, sev = 0.9)  # bot right
+                   )
+
+p <- cowplot::ggdraw() + 
+  cowplot::draw_image(here::here("images", "color-band.png")) # turn png into ggplot object
+
+color_blind_ex <- cowplot::plot_grid(p, nrow = 1, # top left
+                   colorblindr::edit_colors(p, protan, sev = 0.8), # top right
+                   colorblindr::edit_colors(p, deutan, sev = 0.8), # bot left
+                   colorblindr::edit_colors(p, tritan, sev = 0.8)  # bot right
+                   )
+
+#color_blind_ex 
+
+
+#p2 <- edit_colors(p, deutan, severity = .3)
+
+#colorblindr::edit_colors(weighted_col_size, tritan, sev = 0.1)
+MT <- rbind(mtcars2, mtcars2, mtcars2, mtcars2, mtcars2, 
+            mtcars2, mtcars2, mtcars2, mtcars2, mtcars2)
+MT$Severity <- sort(rep(seq(.1,  1, .1), 32))
+
+MT_gif <- MT %>%
+  ggplot(data = ., 
+         aes( x = Hp, y = Mpg)) +
+  geom_point(alpha = .75, position = "jitter", 
+             aes(size = as.factor(Cyl), col = as.factor(Cyl))
+             ) +
+  scale_x_continuous(limits = c(50, 350), n.breaks = 20) +
+  scale_y_continuous(limits = c(5, 40), n.breaks = 10) +
+  labs(x = "", y = "", 
+       size = "Group", # because mapped to size aes or   scale_size(range=c(2, 10), name = 'Legend Name') if element is size for example
+       col = "Group"
+       ) +
+  #colorblindr::scale_color_OkabeIto(severity = Severity) +  
+#  scale_color_manual(values = c("red", "lightgrey", "#56B4E9")) +
+#  scale_col(name = 'Cylinders') +
+  theme_mod() 
+
+#gganimate::animate(graph1.animation, 
+#                   height = 500, 
+#                   width = 800, 
+#                   fps = 30, 
+#                   duration = 10,
+#                   end_pause = 60, 
+#                   res = 100
+#                   )
+#gganimate::anim_save(here::here("figs", "example.gif"))
+          
+weighted_mpg_size <- mtcars2 %>%
+  ggplot(data = ., 
+         aes(x = Hp, y = Mpg)) +
+  geom_point(alpha = .75, 
+             position = "jitter", aes(size = as.factor(Mpg)),
+             show.legend = FALSE
+             ) +
+  #scale_x_continuous(limits = c(50, 350), n.breaks = 20) +
+  #scale_y_continuous(limits = c(5, 40), n.breaks = 10) +
+  labs(x = "", y = "", 
+       size = "Group", # because mapped to size aes or   scale_size(range=c(2, 10), name = 'Legend Name') if element is size for example
+       #col = "Cylinders"
+       ) +
+#  scale_col(name = 'Cylinders') +
+#  colorblindr::scale_color_OkabeIto() +
+  #theme(axis.text.x = element_blank()) +
+  theme_mod()
+
+#weighted_mpg_size + theme(axis.text.x = element_blank()) + theme(axis.text.y = element_blank())
+```  
+
+
+ 
+
+```{r}
+#| echo: false
+#| fig-align: "center"
+#| fig-width: 7
+
+# **Scatterplots**
+## **MPG ~ Horsepower**
+#unweighted #_col + scale_color_manual(values = c("lightgrey", "lightgrey", "lightgrey"))
+
+
+
+
+
+#| echo: false
+#| fig-align: "center"
+## **MPG ~ Horsepower (Cylinder as 3rd variable)**
+
+#unweighted_col + scale_color_manual(values = c("darkgrey", "darkgrey", "darkgrey"))
+```
+
+---
+
+# **Multiclass Scatterplots**
+
+---
+
+```{r}
+#| echo: false
+#| fig-align: "center"
+
+#remotes::install_github("clauswilke/colorblindr")
+#unweighted_col
+
+
+#colorblindr::cvd_grid(unweighted_col)
+#colorblindr::cvd_grid(unweighted_col, sev = .5)
+#colorblindr::view_cvd(unweighted_col)
+```
+
+
+
+## **3rd Variable Mapped to *Color* Element**
+
+---
+
+## **3rd Variable Mapped to *Color* Element**
+
+```{r}
+#| echo: false
+#| fig-height: 6
+#| fig-width: 8
+#| fig-align: "center"
+
+p <- unweighted_col + theme(axis.text.x = element_blank()) #+ scale_color_manual(values = c("darkgreen", "red", "#56B4E9"))
+#p <- unweighted_col
+
+cowplot::plot_grid(p,  # top left
+                   colorblindr::edit_colors(p, deutan, sev = 0.9), # bot left
+                   colorblindr::edit_colors(p, protan, sev = 0.9), # top right
+                   colorblindr::edit_colors(p, tritan, sev = 0.9)  # bot right
+                   )
+
+```
+
+---
+
+
+## **3rd Variable Mapped to *Color* Element**
+
+```{r}
+#| echo: false
+#| fig-height: 6
+#| fig-width: 8
+#| fig-align: "center"
+# Deuteranomaly affects 1 in every 16 or 17 men and 1 in every 250 women. You can see a simulation of deuteranomalous vision below. 
+#color_norm = c("#D81B60", "#1E88E5", "#FFC107", "#004D40")
+
+# https://www.statology.org/remove-axis-labels-ggplot2/
+#multi_col <- gridExtra::grid.arrange(
+##  unweighted_col + scale_color_manual(values = c("lightgrey", "lightgrey", "lightgrey")),
+#  unweighted_col + theme(axis.text.x = element_blank()) + scale_color_manual(values = c("lightgrey", "lightgrey", "black")),
+#  unweighted_col + theme(axis.text.x = element_blank()) + scale_color_manual(values = c("lightgrey", "lightgrey", "red")),
+#  unweighted_col + theme(axis.text.x = element_blank()) + scale_color_manual(values = c("black", "red", "#56B4E9")),
+#  unweighted_col + theme(axis.text.x = element_blank()) + scale_color_manual(values = c("blue", "purple", "violet")),
+#  nrow = 2, ncol = 2
+#  )
+
+p <- unweighted_col + theme(axis.text.x = element_blank()) #+ scale_color_manual(values = c("darkgreen", "red", "#56B4E9"))
+#p <- unweighted_col
+
+p1 <- p #+ geom_label(x = 300, y = 38, label = "", size = 5)
+p2 <- p + geom_label(x = 210, y = 38, label = "Deuteranomaly", size = 5)
+p3 <- p + geom_label(x = 215, y = 38, label = "Protanomaly", size = 5)
+p4 <- p + geom_label(x = 215, y = 38, label = "Tritanomaly", size = 5)
+
+cowplot::plot_grid(p1,  # top left
+                   colorblindr::edit_colors(p3, deutan, sev = 0.9), # bot left
+                   colorblindr::edit_colors(p2, protan, sev = 0.9), # top right
+                   colorblindr::edit_colors(p4, tritan, sev = 0.9)  # bot right
+                   )
+
+```
+
+
+```{r}
+#| echo: false
+#| fig-align: "center"
+#| fig-height: 6
+#| fig-width: 9
+
+## **3rd Variable Mapped to *Size* Element**
+#weighted_size + theme(axis.text.x = element_blank()) + theme(axis.text.y = element_blank()) # +scale_color_manual(values = c("red", "lightgrey", "black"))
+```
+
+---
+
+# **Beyond Color:<br>   Point Shade and Size**
+
+## **Interpreting Multiclass Scatterplots (Hong, Witt, & Szafir, 2022)**
+
+::: fragment
+![](/images/hong-2021-true-y-mean)
+:::
+
+* Perceived mean position was biased toward locations of larger and darker points
+* *weighted-average illusion*
+
+
+```{r}
+#| echo: false
+#| fig-height: 6
+#| fig-width: 8
+#| fig-align: "center"
+
+## **Size Element Mapped to Y Variable**
+#weighted_mpg_size + theme(axis.text.x = element_blank())
+#  geom_hline(yintercept = mean(mtcars2$Mpg), col = "red", linetype = "dashed", linewidth = 1) +
+#  geom_hline(yintercept = median(mtcars2$Mpg), col = "blue", linetype = "dashed", linewidth = 1)
+```
+
+```{r}
+#| echo: false
+#| fig-height: 6
+#| fig-width: 8
+#| fig-align: "center"
+
+## **Size Element Mapped to Y Variable**
+#weighted_mpg_size + theme(axis.text.x = element_blank()) + 
+#  geom_hline(yintercept = mean(mtcars2$Mpg), col = "red", linetype = "dashed") 
+
+```
+
+
+```{r}
+#| echo: false
+#| fig-height: 6
+#| fig-width: 8
+#| fig-align: "center"
+
+## **Size Element Mapped to Y Variable**
+#weighted_mpg_size + theme(axis.text.x = element_blank()) + 
+#  geom_hline(yintercept = mean(mtcars2$Mpg), col = "red", linetype = "dashed") +
+#  geom_hline(yintercept = median(mtcars2$Mpg), col = "blue", linetype = "dashed")
+
+```
+
+---
+
+## **Research Questions**
+
+* Can estimates of recidivism be extracted accurately from scatterplots? 
+
+* If point size influences attention:
+    + ... estimates of recidivism may be biased (e.g., *weighted-average illusion*)
+    + ... which may increase perceived risk 
+    + ... and increase commit decisions (e.g., beyond reasonable doubt)
+
+* Alternatively, rely equally on verbal expert testimony.
+
+---
+
+# **Design and Method**
+---
+
+## **Variables**
+
+* **Plot Condition** (b/s) 
+  + None, Unweighted, Weighted (point size = recidivism rate)
+
+* **Outcome Variables**
+  + **Recidivism Estimates** (Unweighted, Weighted) 
+    - *For all Assessment Scores (-2 to 7)*  
+    - *Defendant Score (2)* 
+  + **Commitment Decision** (*beyond reasonable doubt*): Yes or No 
+
+---
+
+# **Data Generation and Scatterplot Creation**
+
+---
+
+## **From Blais et al. (2022), Predicted Recidivism**
+
+![](/figs/blais_data_points_animated.gif){width=700 fig-align="center"}
+
+---
+
+## **Recidivism Across All Scores**
+
+*point = rate per locale*
+
+## **Recidivism Across All Scores**
+
+*point = rate per locale*
+
+::: {.nonincremental}
+::: {#fig-stimuli layout-ncol="2"}
+
+```{r}
+#| echo: false
+#| fig-width: 4
+#| fig-height: 5
+#| out-width: "80%"
+#| fig-align: "center"
+Blais.p.unweighted
+
+```
+
+```{r}
+#| echo: false
+#| fig-width: 4
+#| fig-height: 5
+#| out-width: "80%"
+#| fig-align: "center"
+#Blais_size
+Blais.p.weighted
+```
+
+:::
+
+:::
+
+
+---
+
+## **Recidivism for Defendant's Score**
+
+*point = rate per locale*
+
+::: {.nonincremental}
+::: {#fig-stimuli layout-ncol="2"}
+
+```{r}
+#| echo: false
+#| fig-width: 4
+#| fig-height: 5
+#| out-width: "80%"
+#| fig-align: "center"
+
+#Blais.p.unweighted
+Brent_2_default
+
+```
+
+```{r}
+#| echo: false
+#| fig-width: 4
+#| fig-height: 5
+#| out-width: "80%"
+#| fig-align: "center"
+
+#Blais.p.weighted
+Brent_2_size
+
+```
+
+:::
+
+:::
+
+---
+
+
+# **Procedure**
+
+* Case Background
+
+* Arguments
+
+* **Presented Recidivism Scatterplots** 
+
+  + Estimate Recidivism Rate (**All Scores**)
+  + Estimate Defendant's Recidivism Rate (**Defendant's Score**)
+  
+* **Expert Opinion** (Score = 2; 9% recidivism risk)
+
+* Closing Statement
+
+* Commitment Decision
+
+---
+
+
+# **Results**
+
+---
+
+
+## **Predicted Recidivism (All Assessment Scores)**
+
+::: {.nonincremental}
+::: {#fig-stimuli layout-ncol="2"}
+
+```{r}
+#| echo: false
+#| fig-width: 4
+#| fig-height: 5
+#| out-width: "80%"
+#| fig-align: "center"
+#Blais_default
+estimated_unweighted$base
+
+```
+
+```{r}
+#| echo: false
+#| fig-width: 4
+#| fig-height: 5
+#| out-width: "80%"
+#| fig-align: "center"
+#Blais_size
+estimated_weighted$base
+```
+
+:::
+:::
+
+---
+
+
+## **Predicted Recidivism (All Assessment Scores)**
+
+::: {.nonincremental}
+::: {#fig-stimuli layout-ncol="2"}
+
+```{r}
+#| echo: false
+#| fig-width: 4
+#| fig-height: 5
+#| out-width: "80%"
+#| fig-align: "center"
+
+estimated_unweighted$line
+
+#mean(BLAIS_2y_obs$rate, na.rm = T)
+#Blais_default + geom_hline(yintercept = mean(BLAIS_2y_obs$rate, na.rm = T), linetype = "dashed", linewidth = 1, col = "black")
+
+#base_avgest_bar_tconf + 
+#  geom_hline(yintercept = BLAIS_2y_mean/100, linetype = "dashed", linewidth = 1, color = "blue")
+
+#  geom_vline(xintercept = mean(BLAIS_2y_obs$score, na.rm = T))
+
+```
+
+
+```{r}
+#| echo: false
+#| fig-width: 4
+#| fig-height: 5
+#| out-width: "80%"
+#| fig-align: "center"
+estimated_weighted$base
+
+#Blais_size + 
+#  geom_hline(yintercept = mean(BLAIS_2y_obs$rate, na.rm = T),
+#             linetype = "dashed", linewidth = 1, col = "black") +
+#  geom_text(label = paste0("M = ", round(mean(BLAIS_2y_obs$rate, na.rm = T), 1), "%"), x = -1, y = 22)
+
+```
+
+:::
+:::
+
+---
+
+## **Predicted Recidivism (All Assessment Scores)**
+
+::: {.nonincremental}
+::: {#fig-stimuli layout-ncol="2"}
+
+```{r}
+#| echo: false
+#| fig-width: 4
+#| fig-height: 5
+#| out-width: "80%"
+#| fig-align: "center"
+
+estimated_unweighted$line
+
+```
+
+
+```{r}
+#| echo: false
+#| fig-width: 4
+#| fig-height: 5
+#| out-width: "80%"
+#| fig-align: "center"
+estimated_weighted$line
+
+```
+
+:::
+:::
+
+---
+
+## **Predicted Recidivism (All Assessment Scores)**
+
+::: {.nonincremental}
+::: {#fig-stimuli layout-ncol="2"}
+
+```{r}
+#| echo: false
+#| fig-width: 4
+#| fig-height: 5
+#| out-width: "80%"
+#| fig-align: "center"
+
+estimated_unweighted$line
+
+```
+
+
+```{r}
+#| echo: false
+#| fig-width: 4
+#| fig-height: 5
+#| out-width: "80%"
+#| fig-align: "center"
+estimated_weighted$ci
+
+```
+
+:::
+:::
+
+---
+
+## **Predicted Recidivism for Defendant's Score**
+
+---
+
+
+## **Predicted Recidivism for Defendant's Score**
+
+::: {#fig-stimuli layout-ncol="2"}
+
+```{r}
+#| echo: false
+#| fig-width: 4
+#| fig-height: 5
+#| out-width: "80%"
+#| fig-align: "center"
+#Brent_2_default
+estimated_score_unweighted$base
+```
+
+```{r}
+#| echo: false
+#| fig-width: 4
+#| fig-height: 5
+#| out-width: "80%"
+#| fig-align: "center"
+estimated_score_weighted$base
+```
+:::
+:::
+
+---
+
+
+## **Predicted Recidivism for Defendant's Score**
+
+::: {.nonincremental}
+::: {#fig-stimuli layout-ncol="2"}
+
+```{r}
+#| echo: false
+#| fig-width: 4
+#| fig-height: 5
+#| out-width: "80%"
+#| fig-align: "center"
+estimated_score_unweighted$line
+#Brent_2_default + 
+#  geom_hline(yintercept = BRENT_Score2_mean, linewidth = 1, 
+#             linetype = "dashed", col = "black")
+
+```
+
+```{r}
+#| echo: false
+#| fig-width: 4
+#| fig-height: 5
+#| out-width: "80%"
+#| fig-align: "center"
+estimated_score_weighted$base
+#Brent_2_size + 
+#  geom_hline(yintercept = BRENT_Score2_mean, linewidth = 1, 
+#             linetype = "dashed", col = "black")
+
+```
+
+:::
+
+:::
+
+---
+
+## **Predicted Recidivism for Defendant's Score**
+
+::: {.nonincremental}
+::: {#fig-stimuli layout-ncol="2"}
+
+```{r}
+#| echo: false
+#| fig-width: 4
+#| fig-height: 5
+#| out-width: "80%"
+#| fig-align: "center"
+estimated_score_unweighted$line
+
+```
+
+```{r}
+#| echo: false
+#| fig-width: 4
+#| fig-height: 5
+#| out-width: "80%"
+#| fig-align: "center"
+estimated_score_weighted$line
+
+
+```
+
+:::
+
+:::
+
+---
+
+## **Predicted Recidivism for Defendant's Score**
+
+::: {.nonincremental}
+::: {#fig-stimuli layout-ncol="2"}
+
+```{r}
+#| echo: false
+#| fig-width: 4
+#| fig-height: 5
+#| out-width: "80%"
+#| fig-align: "center"
+estimated_score_unweighted$line
+#Brent_2_default + 
+#  geom_hline(yintercept = BRENT_Score2_mean, linewidth = 1, 
+#             linetype = "dashed", col = "black")
+
+```
+
+```{r}
+#| echo: false
+#| fig-width: 4
+#| fig-height: 5
+#| out-width: "80%"
+#| fig-align: "center"
+estimated_score_weighted$ci
+#Brent_2_size + 
+#  geom_hline(yintercept = BRENT_Score2_mean, linewidth = 1, 
+#             linetype = "dashed", col = "black")
+
+```
+
+:::
+
+:::
+
+---
+
+# **Beyond Reasonable Doubt to Commit?**
+
+---
+
+## **Decision to Commit Defendant** (*Beyond Reasonable Doubt*)
+
+## **Decision to Commit Defendant** (*Beyond Reasonable Doubt*)
+
+```{r commit-plots}
+#| echo: false
+#| fig-align: "center"
+commit_plot <- commit_summary %>%
+  ggplot(data = ., aes(x = Plot, y = Commit, label = paste0(100*round(Commit, 2), "%"))) +
+  geom_bar(stat = "identity", width = .4, fill = "grey70") +
+  scale_y_continuous(limits = c(0, .70), n.breaks = 20, labels = scales::label_percent()) +
+  geom_label(nudge_y = .03) +# label = commit_summary$Commit) +
+  labs(title = "", x = "Plot Condition", 
+       y = "Committent Decision (Yes)",
+       subtitle = "") +
+  theme_mod() 
+
+#gg_png(dir = here::here("images"), plot = commit_plot)
+
+#commit_plot
+
+commit_plot + theme_mod()
+
+```
+
+
+---
+
+```{r base-min-plots}
+#| echo: false
+#| fig-align: "center"
+# MinNumEst
+
+base_min_plot <- DAT %>%
+  ggplot(data = ., aes(x = Plot, y = MinNumEst, seed = plot_seed)) +
+  geom_point(position = position_jitter(
+    seed = plot_seed, width = .2),
+    alpha  = .8) +
+  scale_y_continuous(limits = c(-.01, .95), n.breaks = 18) +
+  labs(title = "", x = "Plot", y = "MinNumEst *********** ",
+       subtitle = "") +
+  theme_ben()
+
+#gg_png(dir = here::here("images"), plot = base_min_plot)
+
+minnumest_summary <- DAT %>%
+  group_by(., Plot) %>%
+  summarise(., 
+            MinNumEst_mean = mean(MinNumEst, na.rm = TRUE),
+            MinNumEst_med  = median(MinNumEst, na.rm = TRUE),
+            MinNumEst_sd  = sd(MinNumEst, na.rm = TRUE),
+            MinNumEst_sem  = sd(MinNumEst, na.rm = TRUE)/sqrt(dplyr::n()),
+            n = dplyr::n()
+            )
+
+base_min_plot_mean <- base_min_plot +
+  geom_point(data = DAT %>% group_by(., Plot) %>% summarise(., MinNumEst = mean(MinNumEst, na.rm = TRUE)), 
+             col = "red", size = 5, alpha = .5) +
+  geom_label(x = 3.5, y = .2, label = "mean", fill = "grey", col = "red", nudge_x = 0) #+
+#  annotate(
+#    geom = "curve", 
+#    x = 1.5, y = .45, # start
+#    xend = 1.02, yend = minnumest_summary$MinNumEst_mean[1] + 0, # end
+#    curvature = .15, col = "red", arrow = arrow(length = unit(2, "mm"))
+#  )
+
+gg_png(dir = here::here("images"), plot = base_min_plot_mean)
+
+base_min_plot_mean_med <- base_min_plot_mean + 
+  geom_point(data = DAT %>% group_by(., Plot) %>% summarise(., MinNumEst = median(MinNumEst, na.rm = TRUE)), 
+             col = "blue", size = 5, alpha = .5) +
+  geom_label(x = 3.48, y = .10, label = "median", fill = "grey", col = "blue", nudge_x = 0) #+
+#  annotate(
+#    geom = "curve", 
+#    x = 2.92, y = .85, # start
+#    xend = 1.02, yend = minnumest_summary$MinNumEst_med[1] + 0, # end
+#    curvature = .15, col = "blue", arrow = arrow(length = unit(2, "mm"))
+#  ) 
+
+#gg_png(dir = here::here("images"), plot = base_min_plot_mean_med)
+
+```
+
+
+## **Summary**
+
+* Observed a *Weighted-average illusion* 
+  + Larger points led to overestimation of **All-Score Recidivism**
+
+* Weighted points were associated with higher **decisions to commit**
+  + ... despite expert testimony of 9% risk
+
+* Compared with Krauss, Cook, & Klapatch (2018)
+  + **~30% No Plot/Unweighted** similar to **35% for Low/13% Risk**
+  + **45% for Weighted** similar to **42% for Moderate-High or High**
+    - Increasing perceived risk?
+
+* Visual elements of plots *may supersede expert testimony* and influence juror decisions.
+
+---
+
+
+
+
+# **SARMAC 2023 <br> Nagoya, Japan**
+
+---
+
+## **Risk-Communication Format (Krauss, Cook, & Klapatch, 2018)**
+
+::: {.fragment}
+
+* Based on STATIC-99R labeling 
+
+* **Format** presented to mock jurors in simulated SVP civil proceeding 
+  + *Categorically* (low, low-moderate, moderate-high, high)
+  + *Numerically* (13%, 21%, 30%, 43%)
+
+:::
+
+::: {.fragment}
+
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+#| fig-align: "center"
+data.frame(Format = c("Low | 13%", "Low-Mod | 21%" , "Mod-High | 30%", "High | 43%"),
+           #Numeric = c("13%", "21%", "30%", "43%"),
+           Categorical = c("20%", "17%", "36%", "25%"),
+           Numeric = c("19%", "13%", "17%", "14%")
+           ) %>%
+  kableExtra::kbl(label = "", caption = "<b>Commitment Decisions (percent yes)</b>")
+
+```
+
+:::
+
+::: {.fragment}
+* **Format** influences risk perceptions/commitment decisions
+:::
+
+---
+
+
+## **Size/Shade Mapping (Hong, Witt, & Szafir, 2022)**
+
+::: {layout-ncol=2}
+::: fragment
+![](/images/hong-2021-plot-response.png){width=600}
+:::
+
+::: fragment
+
+* See scatterplot
+
+* Click estimated centroid position (500 ms)
+
+:::
+:::
+
+---
+
+
+
+# **Procedure**
+
+---
+
+## **Read Case Background**
+
+The defendant (person who is the subject of the civil commitment in this case), James Stone, is currently 30 years old. He was born in Kansas but grew up in Phoenix, Arizona. Mr. Stone has been diagnosed with a learning disability. In 2012, he was sentenced to 5 years for a sexual offense. From 2012 to 2017, James Stone served his prison sentence. While in prison, Mr. Stone successfully completed a two-year long cognitive behavioral Sex Offenders' Treatment Program (SOTP) designed to reduce his likelihood of recidivism. Recidivism simply means a tendency for Mr. Stone to re-offend. As part of his treatment, he admitted to having committed another act of sexual misconduct (he was never arrested for or convicted of the incidence), and completed treatment related to this act as well. Upon completion of his sentence, he was transferred to the Arizona mental hospital to await his current civil commitment proceedings.
+
+------------------------------------------------------------------------
+
+## **Make Decision**
+
+*"As the petitioner in this case, I am not required to prove to you with absolute certainty that, if released into the community, Mr. Stone will commit a sexually violent offense. I am only required to prove that there exists a more likely than not chance that Mr. Stone will commit a future sexual offense. I must caution you though that the majority of sex crimes are committed in this country are not reported. In other words, many sex crimes go unreported and we have no way of knowing how many are actually being committed by sexual offenders released into the community. The law only requires that you find the defendant is likely to commit a future sexually violent offense; not that he is likely to be arrested for one."*
+<br><br>
+
+***"I will ask you to render a verdict that Mr. Stone does in fact meet the criteria for civil commitment of a sex offender and that he must be committed to a State facility for treatment."***
+
+------------------------------------------------------------------------
+
+## **Recidivism by Assessment Instrument**
+
+**Petitioner**: Based upon the research, what does the instrument tell you about recidivism risk?
+<br><br>
+**Dr. Brent:** The data over decades can be summarized using a visualization for the Static-99R scores and their corresponding estimated risk rates of recidivism. The points on the plot show average recidivisim rates for different cities. Overall, you can see that higher scores on the Static-99R correspond to greater risks of recidivism in a 2 year period.
+<br><br>
+Then Visualization: A, B, or None
+<br><br>
+**Mr. Brent**: Looking at this visualization, the members of the jury can estimate the average risk of recidivism in 2 years.
+
+------------------------------------------------------------------------
+
+## **Recidivism for Specific Assessment Score**
+
+**Petitioner**: Now, based upon the research and how this instrument is utilized, what is the corresponding recidivism estimate for Mr. Stone's score?
+<br><br>
+**Dr. Brent**: His score on the Static-99R is the most common score, which is 2. Although all individuals scored the same on the Static-99R, some happened to recidivate in 2 years and some did not. Members of the jury should focus specifically on recidivism rates for individuals with a score of 2.
+<br><br>
+Then Visualization: Unweighted, Weighted or None
+
+------------------------------------------------------------------------
+
+## **Expert Opinion**
+
+**Petitioner**: Do you have an opinion specifically as it relates to Mr. Stone as to the relative degree of risk he poses to commit sexual offenses if he is released into the community? That is, would you believe to a reasonable psychological certainty that he has a likelihood to recidivate?
+<br><br>
+**Dr. Brent**: The law asks us to make a determination as to whether a person is likely or not likely and my opinion based on the instrument. For those individuals assessed with a Static-99R score of 2 as did Mr. Stone, the average likelihood of risk in the next 2 years is approximately 9%.
+<br><br>
+*NOTE*: All Ps informed of **9%** recidivism risk.
+
+------------------------------------------------------------------------
+
+## **Petitioner Closing Statement**
+
+**Petitioner**: I am not requiring you to say to yourselves, "I have to decide with 100 percent certainty that Mr. Stone is going to go back out on the street and sexually offend against others." That is not your burden or mine. My burden is to prove to you beyond a reasonable doubt that his paraphilia predisposes him to commit such crimes if he is released into the community -- not that he will, but only that he is likely to. The law doesn't require that you figure out how many times Mr. Stone might be arrested. In the real world, as reflected in Mr. Stone's history, many cases are not reported. The law says only, "More likely than not to commit another act of sexual violence," and not necessarily to be convicted of one, over his entire remaining lifetime.
+
+---
+
+## **Commitment Decision**
+
+*Arizona law provides that a person may be involuntarily committed to the custody of the Arizona Department of Health Services if that person is found beyond a reasonable doubt to be highly likely to commit future sexually violent acts. To decide this, two conditions apply: One, one who has been convicted of a sexually violent offense; and two, he has a mental disorder that makes it likely he will engage in future acts of sexual violence. The State must prove both of these elements beyond a reasonable doubt or you must find that he is not a sexually violent person....*
+<br><br>
+*As a member of the jury, based on the information presented in the hearing materials,* **do you have "beyond a reasonable doubt"** *that Mr. Stone is more likely than not to commit a future sexually violent offense?*
+
+
+
+

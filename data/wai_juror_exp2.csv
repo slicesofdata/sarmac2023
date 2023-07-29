@@ -1,0 +1,275 @@
+id,Exp,Plot,Duration,Finished,AvgScore_Risk,Score_Risk,RiskEntry,Crime,JuryJudge,RiskCheck,MinNumEst,MinNumEst_2,MinNumEst_3,MinNumEst_3_6_TEXT,RiskVal2Label,RiskNumEst_1,RiskNumEst_2,RiskNumEst_3,RiskNumEst_4,RiskNumEst_5,NC_1,NC_2,NC_3,NC_4,NC_5,NC_6,NC_7,NC_8,NC_9,NC_10,NC_11,NC_12,NC_13,NC_14,NC_15,NC_16,NC_17,NC_18,DJO1,DJO2,DJO3,DJO4,DJO5,DJO6,DJO7,DJO8,DJY1,DJY2,DJY3,DJY4,DJY5,DJY6,DJY7,DJY8,CRT1,CRT2,CRT3,Age,Vote,Jury,Educ,Job,Income,Political,Race,Sex,Risk,PlotType,StaticScore,RiskValue,Name,Minutes,CrimeAcc,DOB,BeyondDoubt,RiskCheck_Not_Rem,RiskLevel_1,RiskLevel_2,RiskLevel_3,RiskLevel_4,RiskLevel_5,AvgScore_Risk_Est_Diff,Score_Risk_Est_Diff,Score_Risk_Est_Diff_Exp,FailedChecks,OrderedRisk,exclusion
+15809,Exp 2,Unweighted,1381,True,35,9,10,Sexual Offense,0,9,70,Well Above Average Risk,Well Above Average Risk,NA,Average Risk,10,30,50,70,80,-,-,Neutral,-,-,-,Neutral,-,-,-,-,Neutral,-,-,-,-,-,-,"Slightly
+Disagree",Neutral,Disagree,Disagree,Disagree,Disagree,Disagree,Disagree,"Slightly
+Agree","Slightly
+Agree",Neutral,"Slightly
+Disagree","Slightly
+Disagree","Slightly
+Disagree","Slightly
+Disagree",Neutral,NA,NA,NA,19,Yes,No,Some college,Student,"$15,000 - $29,999",Weakly liberal,Asian,Female,moderate to high risk,default,2,50% risk likelihood,Respondent,23.02,1,2003,0,,10,30,50,70,80,15.731730206376536,0.01999379804607493,0,1,1,include
+14977,Exp 2,None,816,True,NA,NA,75,Sexual Offense,0,75,95,Well Above Average Risk,Very Low Risk,NA,Below Average Risk,10,30,60,90,100,-,-,-,Very Strongly Disagree,Very Strongly Disagree,Very Strongly Agree,-,-,-,Very Strongly Agree,-,Very Strongly Disagree,Very Strongly Agree,-,-,-,-,-,Agree,"Slightly
+Agree",Agree,"Slightly
+Agree",Disagree,Disagree,"Slightly
+Agree","Slightly
+Agree",Agree,"Slightly
+Agree","Slightly
+Agree","Slightly
+Agree","Slightly
+Agree","Slightly
+Agree",Agree,Agree,NA,NA,NA,21,Yes,No,Some college,Student,"$15,000 - $29,999",Moderately liberal,White or Non-Hispanic White,Male,low risk,noplot,2,40% risk likelihood,Respondent,13.6,1,2001,0,,10,30,60,90,100,NA,NA,NA,1,1,include
+15089,Exp 2,None,1247,True,NA,NA,9,Sexual Offense,0,9,9,Very Low Risk,Very Low Risk,NA,Very Low Risk,0,10,30,50,70,-,-,-,-,-,-,-,Neutral,-,-,-,-,-,-,-,-,-,-,Disagree,Disagree,Disagree,Disagree,Disagree,Disagree,"Slightly
+Disagree","Slightly
+Disagree","Slightly
+Agree","Slightly
+Agree","Slightly
+Agree","Slightly
+Agree","Slightly
+Disagree","Slightly
+Agree","Slightly
+Agree","Slightly
+Agree",NA,NA,NA,21,Yes,No,Some college,Student,"Less than $14,999",Moderately liberal,Black or African American,Female,risk,noplot,2,0% risk likelihood,Respondent,20.78,1,2001,0,,0,10,30,50,70,NA,NA,NA,0,1,include
+15873,Exp 2,Unweighted,450,True,15,50,20,Sexual Offense,0,22,30,Average Risk,Below Average Risk,NA,Very Low Risk,10,30,60,80,100,-,Very Strongly Agree,-,-,-,-,-,-,Neutral,Very Strongly Agree,Very Strongly Agree,-,-,-,-,-,-,-,Neutral,"Slightly
+Agree","Slightly
+Agree","Slightly
+Agree",Neutral,"Slightly
+Agree",Neutral,"Slightly
+Agree","Slightly
+Disagree","Slightly
+Disagree",Disagree,Neutral,"Slightly
+Agree","Slightly
+Disagree","Slightly
+Disagree","Slightly
+Agree",NA,NA,NA,20,No,No,4-year degree,Student,"Less than $14,999",Weakly liberal,Asian,Male,low to moderate risk,default,2,20% risk likelihood,Respondent,7.5,1,2002,0,,10,30,60,80,100,-4.268269793623464,41.01999379804607,41,1,1,include
+15852,Exp 2,Weighted,1831,True,25,9,9,Sexual Offense,1,9,9,Above Average Risk,Very Low Risk,NA,Well Above Average Risk,0,0,10,20,50,-,-,Very Strongly Disagree,-,-,-,-,-,-,Very Strongly Agree,-,Very Strongly Disagree,-,-,-,-,-,-,Agree,"Slightly
+Agree",Agree,Agree,"Slightly
+Agree","Slightly
+Agree","Slightly
+Agree","Slightly
+Agree",Agree,Agree,"Slightly
+Agree",Agree,Agree,Agree,Agree,"Slightly
+Agree",NA,NA,NA,20,Yes,No,Some college,Student,"$15,000 - $29,999",Weakly liberal,White or Non-Hispanic White,Male,risk,size,2,60% risk likelihood,Respondent,30.52,1,2002,1,,0,0,10,20,50,5.731730206376536,0.01999379804607493,0,0,1,include
+14670,Exp 2,Unweighted,1010,True,25,10,9,Sexual Offense,0,9,30,Below Average Risk,Very Low Risk,NA,Well Above Average Risk,10,30,50,60,70,-,-,-,-,-,-,-,Neutral,Neutral,-,-,-,-,-,-,-,-,Neutral,Neutral,"Slightly
+Agree",Neutral,"Slightly
+Disagree","Slightly
+Disagree",Neutral,Disagree,"Slightly
+Disagree","Slightly
+Agree","Slightly
+Agree","Slightly
+Agree","Slightly
+Agree","Slightly
+Agree","Slightly
+Disagree","Slightly
+Disagree",Neutral,NA,NA,NA,21,Yes,No,4-year degree,Student,"Less than $14,999",Weakly liberal,White or Non-Hispanic White,Male,high risk,default,2,70% risk likelihood,Respondent,16.83,1,2001,0,,10,30,50,60,70,5.731730206376536,1.019993798046075,1,0,1,include
+15559,Exp 2,Weighted,685,True,5,12,20,Sexual Offense,0,20,30,Average Risk,Below Average Risk,NA,Above Average Risk,10,20,30,40,70,-,-,-,-,Neutral,-,-,-,-,Neutral,-,-,-,Neutral,-,-,-,-,"Slightly
+Agree",Disagree,"Slightly
+Agree","Slightly
+Disagree","Slightly
+Disagree",Neutral,Disagree,"Slightly
+Disagree","Slightly
+Agree","Slightly
+Agree",Agree,"Slightly
+Agree",Neutral,"Slightly
+Agree","Slightly
+Disagree",Neutral,NA,NA,NA,19,No,No,Some college,Student,"Less than $14,999",Weakly liberal,White or Non-Hispanic White,Female,low risk,size,2,40% risk likelihood,Respondent,11.42,1,2003,0,,10,20,30,40,70,-14.268269793623464,3.019993798046075,3,1,1,include
+15741,Exp 2,None,1610,True,NA,NA,9,Sexual Offense,0,9,67,Well Above Average Risk,Below Average Risk,NA,Above Average Risk,0,NA,10,30,50,Neutral,Neutral,-,-,-,Neutral,-,-,-,Very Strongly Agree,Very Strongly Agree,-,Neutral,-,-,-,-,-,"Slightly
+Agree","Slightly
+Agree",Agree,Agree,Agree,"Slightly
+Agree",Agree,Agree,Agree,Agree,Agree,Agree,"Slightly
+Agree",Agree,"Slightly
+Agree",Agree,NA,NA,NA,19,Yes,No,Some college,Student,"Less than $14,999",Weakly liberal,White or Non-Hispanic White,Male,low to moderate risk,noplot,2,30% risk likelihood,Respondent,26.83,1,2003,0,,0,0,10,30,50,NA,NA,NA,0,NA,include
+14509,Exp 2,None,1101,True,NA,NA,9,Sexual Offense,0,9,5,Below Average Risk,Below Average Risk,NA,Well Above Average Risk,0,10,30,40,50,-,-,-,Neutral,-,-,-,-,-,-,-,-,-,-,Neutral,-,-,-,Disagree,"Slightly
+Disagree","Slightly
+Disagree","Slightly
+Disagree","Slightly
+Agree","Slightly
+Disagree",Disagree,"Slightly
+Disagree","Slightly
+Disagree","Slightly
+Agree",Agree,"Slightly
+Agree",Agree,Neutral,"Slightly
+Agree","Slightly
+Agree",NA,NA,NA,21,Yes,No,High school graduate,Student,"Less than $14,999",Moderately liberal,Other,Male,risk,noplot,2,40% risk likelihood,Respondent,18.35,1,2001,0,,0,10,30,40,50,NA,NA,NA,0,1,include
+15753,Exp 2,Weighted,1573,True,40,12,9,Sexual Offense,1,9,6,Well Above Average Risk,Very Low Risk,NA,Very Low Risk,20,40,60,80,100,-,Very Strongly Disagree,-,-,-,-,Neutral,Very Strongly Agree,-,Neutral,-,-,-,-,-,-,-,Neutral,Disagree,"Slightly
+Disagree","Slightly
+Disagree","Slightly
+Agree","Slightly
+Agree","Slightly
+Agree",Neutral,Neutral,Agree,Neutral,"Slightly
+Agree",Disagree,"Slightly
+Disagree",Neutral,Neutral,"Slightly
+Disagree",NA,NA,NA,20,Yes,No,Some college,Student,"Less than $14,999",Weakly liberal,Hispanic/Latino,Male,high risk,size,2,0% risk likelihood,Respondent,26.22,1,2002,1,,20,40,60,80,100,20.731730206376536,3.019993798046075,3,0,1,include
+15782,Exp 2,Weighted,80648,True,30,10,9,Sexual Offense,0,9,50,Above Average Risk,Very Low Risk,NA,Well Above Average Risk,10,30,50,60,80,Neutral,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,Very Strongly Agree,"Slightly
+Disagree","Slightly
+Agree","Slightly
+Agree","Slightly
+Agree","Slightly
+Agree","Slightly
+Agree",Neutral,Neutral,Agree,Agree,Agree,Agree,Agree,Agree,Agree,Agree,NA,NA,NA,18,Yes,No,Some college,Student,"Less than $14,999",Strongly liberal,White or Non-Hispanic White,Female,low to moderate risk,size,2,70% risk likelihood,Respondent,1344.13,1,2004,0,,10,30,50,60,80,10.731730206376536,1.019993798046075,1,0,1,include
+15820,Exp 2,Weighted,1266,True,85,10,9,Sexual Offense,0,9,9,Above Average Risk,Average Risk,NA,Above Average Risk,10,30,50,60,80,-,-,-,-,-,Neutral,-,-,-,Neutral,-,-,-,-,-,Neutral,Neutral,-,Agree,Disagree,Disagree,Neutral,Neutral,Neutral,"Strongly
+Agree",Neutral,Agree,Neutral,Neutral,Neutral,"Slightly
+Agree",Neutral,"Slightly
+Agree","Slightly
+Agree",NA,NA,NA,19,Yes,No,Some college,Student,"$15,000 - $29,999",Weakly liberal,White or Non-Hispanic White,Female,moderate to high risk,size,2,50% risk likelihood,Respondent,21.1,1,2003,0,,10,30,50,60,80,65.73173020637654,1.019993798046075,1,0,1,exclude
+14756,Exp 2,None,1061,True,NA,NA,60,Sexual Offense,0,90,100,Well Above Average Risk,Well Above Average Risk,NA,Above Average Risk,10,30,50,70,90,Very Strongly Agree,-,-,-,-,Neutral,-,Neutral,-,-,-,-,-,-,-,Neutral,-,-,"Slightly
+Disagree","Slightly
+Disagree",Disagree,Neutral,Disagree,"Slightly
+Agree","Slightly
+Disagree",Disagree,Agree,"Slightly
+Agree",Agree,Agree,"Slightly
+Disagree","Slightly
+Disagree","Slightly
+Agree","Slightly
+Disagree",NA,NA,NA,21,Yes,No,4-year degree,Student,"More than $105,000",Strongly liberal,Asian,Female,risk,noplot,2,60% risk likelihood,Respondent,17.68,1,2001,0,,10,30,50,70,90,NA,NA,NA,1,1,include
+15882,Exp 2,Unweighted,1296,True,23,10,9,Sexual Offense,0,9,6,Below Average Risk,Very Low Risk,NA,Well Above Average Risk,0,10,20,30,50,-,-,-,-,-,-,Neutral,Neutral,-,-,-,-,-,-,-,-,-,-,Neutral,Neutral,Neutral,Neutral,Neutral,"Slightly
+Agree","Slightly
+Agree",Neutral,Agree,Agree,Agree,Agree,Agree,Agree,Agree,Agree,NA,NA,NA,22,Yes,No,Some college,Student,"$15,000 - $29,999",Moderately liberal,Asian,Female,low risk,default,2,50% risk likelihood,Respondent,21.6,1,2000,0,,0,10,20,30,50,3.731730206376536,1.019993798046075,1,0,1,include
+15677,Exp 2,Unweighted,3392,True,22.5,9,9,Sexual Offense,0,9,15,Below Average Risk,Very Low Risk,NA,Above Average Risk,10,20,30,40,50,-,Neutral,-,-,-,-,Neutral,-,-,-,Very Strongly Agree,-,-,-,Neutral,Very Strongly Agree,-,-,Agree,"Slightly
+Agree",Neutral,Agree,"Slightly
+Disagree",Neutral,"Slightly
+Disagree",Neutral,"Strongly
+Agree","Slightly
+Agree",Agree,"Slightly
+Agree",Neutral,Neutral,Neutral,"Slightly
+Agree",NA,NA,NA,20,No,No,Some college,Student,"Less than $14,999",Moderately liberal,Black or African American,Male,moderate to high risk,default,2,40% risk likelihood,Respondent,56.53,1,2002,0,,10,20,30,40,50,3.231730206376536,0.01999379804607493,0,0,1,include
+14303,Exp 2,Weighted,678,True,25,15,2,No specific crime was provided,0,20,2,Above Average Risk,Very Low Risk,NA,Very Low Risk,0,10,30,50,80,-,Neutral,Neutral,Neutral,Neutral,Neutral,Neutral,Neutral,Neutral,Neutral,Neutral,Neutral,Neutral,Neutral,Neutral,Neutral,Neutral,Neutral,"Slightly
+Agree","Slightly
+Agree","Slightly
+Agree","Slightly
+Agree","Slightly
+Agree","Slightly
+Agree","Slightly
+Agree","Slightly
+Agree",Agree,Agree,Agree,Agree,Agree,Agree,Agree,Agree,NA,NA,NA,21,Yes,No,Some college,Unemployed,"Less than $14,999",Moderately liberal,White or Non-Hispanic White,Male,low to moderate risk,size,2,0% risk likelihood,Respondent,11.3,0,2001,0,,0,10,30,50,80,5.731730206376536,6.019993798046075,6,1,1,include
+15480,Exp 2,Unweighted,2816,True,35,40,9,Sexual Offense,0,9,2,Above Average Risk,Below Average Risk,NA,Average Risk,10,20,30,50,80,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,"Slightly
+Agree","Slightly
+Disagree","Slightly
+Agree","Slightly
+Disagree","Slightly
+Disagree","Slightly
+Agree",Agree,"Slightly
+Agree","Slightly
+Agree",Agree,Agree,Agree,"Slightly
+Agree","Slightly
+Agree","Slightly
+Agree","Slightly
+Agree",NA,NA,NA,18,Yes,No,Some college,Employed Part Time,"Less than $14,999",Strongly liberal,Hispanic/Latino,Female,low risk,default,2,30% risk likelihood,Respondent,46.93,1,2004,0,,10,20,30,50,80,15.731730206376536,31.019993798046073,31,0,1,include
+15880,Exp 2,Unweighted,1591,True,8,10,9,Sexual Offense,0,9,15,Above Average Risk,Average Risk,NA,Average Risk,0,0,10,30,50,-,Neutral,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,Disagree,Disagree,"Slightly
+Disagree","Slightly
+Disagree","Slightly
+Disagree","Slightly
+Disagree","Slightly
+Disagree",Disagree,Neutral,"Slightly
+Agree",Agree,"Slightly
+Agree",Agree,"Slightly
+Agree","Slightly
+Agree",Agree,5,100,47,19,Yes,No,Some college,Employed Part Time,"Less than $14,999",Weakly liberal,Asian,Female,moderate to high risk,default,2,10% risk likelihood,Respondent,26.52,1,2003,0,,0,0,10,30,50,-11.268269793623464,1.019993798046075,1,0,1,include
+15890,Exp 2,Unweighted,1191,True,7,6,9,Sexual Offense,0,9,15,Above Average Risk,Below Average Risk,NA,Average Risk,0,10,20,40,50,-,Very Strongly Agree,-,-,-,Neutral,-,-,Neutral,-,-,-,Neutral,-,-,Neutral,-,-,Strongly Disagree,Agree,"Slightly
+Agree",Strongly Disagree,Disagree,Disagree,Disagree,Disagree,Neutral,"Slightly
+Agree",Neutral,Neutral,"Slightly
+Agree","Slightly
+Disagree","Slightly
+Agree","Slightly
+Agree",0.05,500,47,19,Yes,No,Some college,Employed Part Time,"Less than $14,999",Weakly liberal,White or Non-Hispanic White,Male,risk,default,2,risk,Respondent,19.85,1,2003,0,,0,10,20,40,50,-12.268269793623464,-2.980006201953925,-3,0,1,include
+15676,Exp 2,Weighted,2656,True,10,10,9,Sexual Offense,0,9,50,Well Above Average Risk,Below Average Risk,NA,Above Average Risk,10,20,30,50,60,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,Neutral,Disagree,Neutral,Neutral,"Slightly
+Disagree","Slightly
+Disagree",Neutral,Disagree,Agree,Neutral,Agree,Disagree,"Slightly
+Agree",Neutral,Neutral,"Slightly
+Agree",10,100,24,19,Yes,No,Some college,Student,"Less than $14,999",Weakly liberal,Asian,Female,high risk,size,2,30% risk likelihood,Respondent,44.27,1,2003,0,,10,20,30,50,60,-9.268269793623464,1.019993798046075,1,0,1,include
+15767,Exp 2,Unweighted,1032,True,25,8,9,Sexual Offense,1,9,35,Above Average Risk,Below Average Risk,NA,Above Average Risk,10,20,30,60,80,-,-,-,-,-,Neutral,-,-,-,-,Very Strongly Agree,-,-,-,-,-,-,-,Neutral,"Slightly
+Disagree",Neutral,"Slightly
+Agree","Slightly
+Disagree","Slightly
+Disagree","Slightly
+Disagree",Neutral,Agree,"Slightly
+Agree","Slightly
+Agree","Strongly
+Agree",Neutral,"Slightly
+Agree","Slightly
+Agree",Agree,5,5,47,19,Yes,No,Some college,Employed Part Time,"Less than $14,999",Moderately liberal,Asian,Male,low risk,default,2,50% risk likelihood,Respondent,17.2,1,2003,1,,10,20,30,60,80,5.731730206376536,-0.9800062019539251,-1,0,1,include
+15771,Exp 2,None,1002,True,NA,NA,9,Sexual Offense,1,9,60,Above Average Risk,Well Above Average Risk,NA,Above Average Risk,20,40,60,80,90,-,-,-,Neutral,Neutral,-,-,Neutral,Neutral,Neutral,-,-,Neutral,-,Neutral,-,-,-,Agree,Agree,"Slightly
+Agree",Agree,Neutral,Neutral,"Slightly
+Agree","Slightly
+Agree","Slightly
+Agree","Slightly
+Agree","Slightly
+Agree","Slightly
+Agree","Slightly
+Agree","Slightly
+Agree","Slightly
+Agree","Slightly
+Agree",0.1,5,24,18,No,No,Some college,Student,"Less than $14,999",Moderately liberal,Asian,Female,moderate to high risk,noplot,2,40% risk likelihood,Respondent,16.7,1,2004,1,,20,40,60,80,90,NA,NA,NA,0,1,include
+15112,Exp 2,Unweighted,1206,True,20,10,15,Sexual Offense,0,14,85,Well Above Average Risk,Very Low Risk,NA,Average Risk,0,10,20,40,60,Neutral,-,-,-,-,-,-,Neutral,Very Strongly Disagree,-,-,-,-,-,Very Strongly Agree,Neutral,-,-,Disagree,Disagree,Disagree,Disagree,Disagree,Strongly Disagree,"Slightly
+Disagree","Slightly
+Disagree","Slightly
+Disagree","Slightly
+Disagree",Neutral,"Slightly
+Disagree","Slightly
+Agree",Disagree,"Slightly
+Disagree",Neutral,0.05,5,47,21,Yes,No,4-year degree,Employed Part Time,"$15,000 - $29,999",Moderately liberal,White or Non-Hispanic White,Male,risk,default,2,20% risk likelihood,Respondent,20.1,1,2001,0,,0,10,20,40,60,0.7317302063765361,1.019993798046075,1,1,1,include
+15028,Exp 2,Unweighted,1225,True,15,7.5,9,Sexual Offense,0,9,51,Above Average Risk,Below Average Risk,NA,Above Average Risk,0,10,20,30,50,-,-,-,-,-,-,-,-,-,Neutral,-,-,-,-,-,-,-,-,"Slightly
+Disagree","Slightly
+Disagree",Agree,"Slightly
+Disagree",Agree,"Slightly
+Disagree",Agree,"Slightly
+Agree",Neutral,Neutral,Neutral,Neutral,"Slightly
+Agree",Neutral,"Slightly
+Agree","Slightly
+Agree",5,5,47,20,No,No,Some college,Student,"Less than $14,999",Weakly conservative,Asian,Male,low risk,default,2,30% risk likelihood,Respondent,20.42,1,2002,0,,0,10,20,30,50,-4.268269793623464,-1.480006201953925,-1.5,0,1,include
+15795,Exp 2,None,1864,True,NA,NA,80,Sexual Offense,0,NA,90,Average Risk,Very Low Risk,NA,Below Average Risk,10,20,30,50,80,-,-,-,Very Strongly Disagree,Very Strongly Disagree,-,-,-,-,Very Strongly Agree,-,Very Strongly Disagree,-,-,-,-,Very Strongly Disagree,Very Strongly Agree,Disagree,"Slightly
+Disagree",Disagree,Neutral,"Slightly
+Disagree",Disagree,Disagree,"Slightly
+Disagree",Agree,"Strongly
+Agree",Agree,Agree,"Slightly
+Disagree","Slightly
+Disagree","Slightly
+Disagree",Disagree,10,5,47,18,Yes,No,Some college,Student,"Less than $14,999",Moderately liberal,White or Non-Hispanic White,Male,moderate to high risk,noplot,2,20% risk likelihood,Respondent,31.07,1,2004,0,,10,20,30,50,80,NA,NA,NA,1,1,include
+15879,Exp 2,Unweighted,2874,True,80,7,9,No specific crime was provided,0,9,40,Average Risk,Below Average Risk,NA,Very Low Risk,10,30,50,70,90,-,-,-,-,-,Neutral,-,Neutral,Neutral,-,-,Very Strongly Disagree,Neutral,-,-,-,-,-,"Slightly
+Disagree","Slightly
+Agree","Slightly
+Agree","Slightly
+Disagree",Neutral,"Slightly
+Disagree","Slightly
+Disagree","Slightly
+Disagree","Slightly
+Agree",Neutral,"Slightly
+Agree","Slightly
+Agree",Agree,Neutral,"Slightly
+Agree","Slightly
+Agree",0.10,100,47,20,No,No,Some college,Student,"Less than $14,999",Strongly liberal,Hispanic/Latino,Male,low to moderate risk,default,2,0% risk likelihood,Respondent,47.9,0,2002,0,,10,30,50,70,90,60.73173020637654,-1.980006201953925,-2,0,1,exclude
+15889,Exp 2,Weighted,1065,True,35,10,9,Sexual Offense,0,9,50,Above Average Risk,Below Average Risk,NA,Well Above Average Risk,0,10,30,50,60,-,-,-,-,-,-,Very Strongly Agree,-,-,-,-,-,Very Strongly Disagree,-,Very Strongly Disagree,Very Strongly Disagree,Very Strongly Agree,-,Disagree,Strongly Disagree,Strongly Disagree,Disagree,Strongly Disagree,Disagree,Disagree,Strongly Disagree,"Slightly
+Disagree",Agree,"Slightly
+Agree",Agree,Agree,"Slightly
+Agree",Agree,Agree,0.05,5,47,19,No,No,Some college,Employed Part Time,"Less than $14,999",Strongly liberal,White or Non-Hispanic White,Male,risk,size,2,70% risk likelihood,Respondent,17.75,1,2003,0,,0,10,30,50,60,15.731730206376536,1.019993798046075,1,0,1,include
+15675,Exp 2,Weighted,854,True,15,8,9,Sexual Offense,0,9,51,Well Above Average Risk,Below Average Risk,NA,Below Average Risk,0,10,10,30,50,-,-,Very Strongly Disagree,-,-,-,-,-,-,-,-,-,Neutral,Very Strongly Agree,-,Very Strongly Agree,-,-,Strongly Disagree,Strongly Disagree,Strongly Disagree,Strongly Disagree,Strongly Disagree,Disagree,Strongly Disagree,Strongly Disagree,Disagree,Disagree,Disagree,Disagree,Disagree,Disagree,Disagree,Disagree,5,5,47,20,Yes,No,High school graduate,Student,"Less than $14,999",Strongly liberal,White or Non-Hispanic White,I do not identify with the options given,moderate to high risk,size,2,10% risk likelihood,Respondent,14.23,1,2002,0,,0,10,10,30,50,-4.268269793623464,-0.9800062019539251,-1,0,1,include
+15687,Exp 2,Unweighted,423,True,56,78,45,Aggravated Assault,1,29,53,Above Average Risk,Average Risk,NA,Average Risk,50,70,20,70,60,-,Neutral,-,-,-,-,-,Neutral,-,-,-,-,-,-,-,-,Neutral,Neutral,Disagree,Neutral,Neutral,Neutral,"Slightly
+Agree","Slightly
+Agree","Slightly
+Disagree","Slightly
+Disagree",Agree,Neutral,Agree,Agree,Agree,Agree,Neutral,Agree,0.06,5,1247,18,No,No,Some college,Employed Part Time,"Less than $14,999",Moderately liberal,Hispanic/Latino,Female,high risk,default,2,40% risk likelihood,Respondent,7.05,0,2004,1,,50,70,20,70,60,36.73173020637654,69.01999379804607,69,1,0,include
+15784,Exp 2,Unweighted,795,True,85,9,9,Sexual Offense,0,9,20,Average Risk,Average Risk,NA,Above Average Risk,10,20,40,60,90,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,Very Strongly Agree,-,-,Agree,Agree,Agree,Agree,"Slightly
+Agree",Agree,Agree,"Slightly
+Agree",Agree,Agree,Agree,"Slightly
+Agree",Agree,"Slightly
+Agree","Strongly
+Agree",Agree,0.05,5,47,19,Yes,No,Some college,Employed Part Time,"$45,000 - $59,999",Moderately liberal,Hispanic/Latino,Male,low risk,default,2,60% risk likelihood,Respondent,13.25,1,2003,0,,10,20,40,60,90,65.73173020637654,0.01999379804607493,0,0,1,exclude
+15893,Exp 2,None,1245,True,NA,NA,22,Sexual Offense,0,32,8,Above Average Risk,Below Average Risk,NA,Very Low Risk,10,30,50,60,70,Very Strongly Agree,Neutral,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,Very Strongly Agree,"Strongly
+Agree","Slightly
+Agree","Strongly
+Agree","Strongly
+Agree","Slightly
+Agree",Agree,Agree,"Slightly
+Agree","Strongly
+Agree","Slightly
+Agree","Slightly
+Agree","Strongly
+Agree",Neutral,Agree,"Slightly
+Agree",Neutral,0.10,100,24,20,No,No,Some college,Unemployed,"Less than $14,999",Centrist/Middle of the Road,Black or African American,Female,low to moderate risk,noplot,2,10% risk likelihood,Respondent,20.75,1,2002,0,,10,30,50,60,70,NA,NA,NA,1,1,include
+15893,Exp 2,Unweighted,254,True,20,50,36,Sexual Offense,1,7,11,Below Average Risk,Above Average Risk,NA,Average Risk,80,50,90,60,30,Very Strongly Agree,-,-,Neutral,-,-,-,-,-,-,-,-,-,-,-,-,-,-,Agree,Agree,"Slightly
+Agree",Agree,Agree,"Slightly
+Agree",Agree,"Slightly
+Agree","Slightly
+Agree","Slightly
+Agree","Slightly
+Agree","Strongly
+Agree","Strongly
+Agree",Agree,Agree,Agree,0.10,5,24,20,No,No,Some college,Unemployed,"Less than $14,999",Centrist/Middle of the Road,Black or African American,Female,high risk,default,2,0% risk likelihood,Respondent,4.23,1,2002,1,,80,50,90,60,30,0.7317302063765361,41.01999379804607,41,1,0,include

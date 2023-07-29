@@ -1,0 +1,6 @@
+library(here)
+library(magrittr)
+library(dplyr)
+library(readr)
+library(ggplot2)
+library(scales)
