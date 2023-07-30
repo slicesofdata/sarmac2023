@@ -1,0 +1,86 @@
+project:
+  type: website
+  output-dir: docs #../docs/
+  preview:
+    port: 7523
+    browser: true
+    navigate: true
+  render:
+    - "*.qmd"
+    - "!omit/" 
+  resources:
+    - "webr-serviceworker.js"
+    - "webr-worker.js"
+    
+website:
+  title: "Gabriel I. Cook"
+   # google-analytics: 
+  # Add site-url (without trailing / at the end)
+  site-url: "https://slicesofdata.github.io/mysite"
+  # Add description: 
+  description: "Website for data visualization lab at Claremont McKenna College."
+
+  navbar:
+    left:
+      - href: index.qmd
+        text: Home
+      - about.qmd
+      - text: Courses
+        #href: courses.qmd
+        menu:
+          - text: Data Visualization
+            href: courses/dv/dv.qmd
+          - text: Cognitive Psychology
+            #href: courses.qmd #[Link](../courses/dv/page2.qmd)
+      - href: lab.qmd
+        text: Lab
+      - href: pubs.qmd
+        text: Pubs
+      - href: dataviztools.qmd
+        text: DataViz Tools
+      - href: CV/0.gicCV_newest.pdf
+        text: CV
+
+    right:
+      - icon: github
+        href: https://github.com/slicesofdata
+        aria-label: GitHub
+      - icon: linkedin
+        href: https://www.linkedin.com/in/gabriel-cook-b618847/
+        aria-label: LinkedIn
+      #- icon: orcid
+      - text: ORCID
+        href: https://orcid.org/0000-0002-1921-5082
+      - text: Instagram
+        href: https://instagram.com/sowingchange
+
+    sidebar:
+      style: "floating"
+      collapse-level: 2
+      align: left
+      contents: auto
+#    - title: "Home"
+#      style: "floating"
+#      collapse-level: 2
+#      align: left
+#      contents:
+#        - syllabus.qmd
+#        - auto: "modules"
+#        - compendium
+#    - title: "Modules"
+#      style: "floating"
+#      collapse-level: 2
+#      align: left
+#      contents: modules
+
+
+
+format:
+  html:
+    theme:  styles.scss
+     # light: darkly
+     # dark: darkly
+    #css: styles.css
+    page-layout: full
+    toc: true
+
